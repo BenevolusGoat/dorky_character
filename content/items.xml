@@ -1,0 +1,60 @@
+<items gfxroot="gfx/items/" version="1">
+	<active id="1" name="Tongue Grapple" description="What that tongue do tho?" gfx="collectibles_tongue_grapple.png" maxcharges="150" chargetype="timed" quality="0" hidden="true" />
+	<active id="2" name="Soul Drain" description="What that soul do tho?" gfx="collectibles_soul_drain.png" maxcharges="300" chargetype="timed" quality="0" hidden="true" />
+</items>
+
+<!--
+	List of caches: (For multiple caches, simply separate the words with spaces)
+	- "all"
+	- "damage"
+	- "firedelay"
+	- "speed"
+	- "range"
+	- "shotspeed"
+	- "luck"
+	- "tearcolor"
+	- "tearflag"
+	- "flying"
+	
+	List of health ups (1 = half heart):
+	- hearts
+	- maxhearts
+	- soulhearts
+	- blackhearts
+	- brokenhearts
+	
+	Active Items:
+	- maxcharges (0 for infinite charge, 1-4, 6, or 12.)
+	- initcharge (Overrides the initial charge for this item. This can be used for active items that do not start with a full charge.)
+	- chargetype (Can be set one of the following 3 values: 
+		- "normal" (recharges on room clear)
+		- "timed" (recharges over time)
+		- "special" (never recharges automatically, cannot be recharged by batteries or item effects)
+	)
+	- passivecache (If set to true, evaluates the player's stats on pickup like a passive item rather than when using the item.)
+	
+	The IDs here are only used within the mod. They don't interfere with vanilla or modded items. They MUST match the id associated with their costume in the costumes2.xml.
+	
+	Misc:
+	- devilprice (List 1 or 2 Hearts.)
+	- special (Set to true to mark as a special item, although this system was removed in Repentance.)
+	- tags (Used for transformations, grouping certain items in an item pool, and other things. Can be detected with Lua.)
+	- shopprice (Sets a custom shop price for this item.)
+	
+	Lits of item tags: (For multiple caches, simply separate the words with spaces)
+	- "angel"
+	- "baby"
+	- "battery"
+	- "bob"
+	- "book"
+	- "dead"
+	- "devil"
+	- "fly"
+	- "guppy"
+	- "mom"
+	- "mushroom"
+	- "poop"
+	- "quest"
+	- "spider"
+	- "syringe"
+-->

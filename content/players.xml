@@ -1,0 +1,14 @@
+<players root="gfx/characters/costumes/" 
+         portraitroot="gfx/ui/stage/" 
+         nameimageroot="gfx/ui/boss/" >
+	<player name="Dorky" skin="character_dorky.png" black="10" items="445"
+		 nameimage="playername_dorky.png" 
+		 portrait="playerportrait_dorky.png" skinColor="5" costumeSuffix="dorky"
+		 birthright="Paddle your enemies" />
+	<player name="The Void" bSkinParent="Dorky" skin="character_spirit.png" black="8"
+		 nameimage="playername_spirit.png"
+		 portrait="" skinColor="6" costumeSuffix="spirit"
+		 extraportrait="extraportrait_spirit.anm2"
+		 birthright="More soul healing"
+		 />
+</players>

@@ -1,0 +1,42 @@
+<ItemPools>
+	<Pool Name="treasure">
+		<Item Name ="Passive Item Test" Weight="1" DecreaseBy="1" RemoveOn="0.1" />
+	</Pool>
+	<Pool Name="greedTreasure">
+		<Item Name ="Passive Item Test" Weight="1" DecreaseBy="1" RemoveOn="0.1" />
+	</Pool>
+	<Pool Name="greedShop">
+		<Item Name ="Passive Item Test" Weight="1" DecreaseBy="1" RemoveOn="0.1" />
+	</Pool>
+</ItemPools>
+
+<!--
+	List of item pools:
+	- "treasure"
+	- "shop"
+	- "boss"
+	- "devil"
+	- "angel"
+	- "curse"
+	- "secret"
+	- "library"
+	- "challenge"
+	- "dungeon"
+	- "bossrush"
+	- "goldenChest"
+	- "redChest"
+	- "greedTreasure"
+	- "greedShop"
+	- "greedBoss"
+	- "greedCurse"
+	- "greedDevil"
+	- "greedAngel"
+	- "greedSecret"
+	- "greedLibrary"
+	- "greedGoldenChest"
+	- "beggar"
+	- "demonBeggar"
+	- "keyMaster"
+	- "bombBum"
+	- "planetarium"
+-->

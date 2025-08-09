@@ -1,0 +1,12 @@
+<entities anm2root="gfx/" version="5">
+	<entity id="1000" variant="1626" anm2path="865.010_evis guts.anm2" baseHP="0" stageHP="0" boss="0" champion="0" collisionDamage="0" collisionMass="1" collisionRadius="0" friction="1" name="Dorky Tongue Rope Movement Handler" shutdoors="false" numGridCollisionPoints="0" shadowSize="0">
+	</entity>
+	<entity id="1000" variant="1627" anm2path="" baseHP="0" stageHP="0" boss="0" champion="0" collisionDamage="0" collisionMass="1" collisionRadius="0" friction="1" name="Dorky Tongue Dummy Target" shutdoors="false" numGridCollisionPoints="0" shadowSize="0">
+	</entity>
+	<entity id="1000" variant="1628" anm2path="" baseHP="0" stageHP="0" boss="0" champion="0" collisionDamage="0" collisionMass="1" collisionRadius="0" friction="1" name="Spirit Spike Rope Movement Handler" shutdoors="false" numGridCollisionPoints="0" shadowSize="0">
+	</entity>
+	<entity id="1000" variant="1629" anm2path="" baseHP="0" stageHP="0" boss="0" champion="0" collisionDamage="0" collisionMass="1" collisionRadius="0" friction="1" name="Spirit Spike Dummy Target" shutdoors="false" numGridCollisionPoints="0" shadowSize="0">
+	</entity>
+	<entity id="1000" variant="1630" anm2path="effect_customdeath_spiritexplosion.anm2" baseHP="0" stageHP="0" boss="0" champion="0" collisionDamage="0" collisionMass="1" collisionRadius="0" friction="1" name="Spirit Custom Death Explosion" shutdoors="false" numGridCollisionPoints="0" shadowSize="16">
+	</entity>
+</entities>
