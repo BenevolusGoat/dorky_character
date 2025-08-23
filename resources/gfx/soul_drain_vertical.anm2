@@ -1,8 +1,8 @@
 <AnimatedActor>
-	<Info CreatedBy="Unknown" CreatedOn="1/8/2023 6:20:52 PM" Version="12" Fps="30"/>
+	<Info CreatedBy="Unknown" CreatedOn="8/23/2025 6:25:55 PM" Version="13" Fps="30"/>
 	<Content>
 		<Spritesheets>
-			<Spritesheet Path="ui\spirit_hpbar.png" Id="0"/>
+			<Spritesheet Path="ui\soul_drain_bar.png" Id="0"/>
 		</Spritesheets>
 		<Layers>
 			<Layer Name="BG" Id="0" SpritesheetId="0"/>

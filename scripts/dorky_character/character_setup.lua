@@ -1,20 +1,162 @@
-local modSupport = {}
-local g = require("src_dorky.dorkyGlobals")
+local Mod = DorkyMod
+local DORKY = Mod.Character.DORKY
+local THE_VOID = Mod.Character.THE_VOID
+local CCP = include("scripts.compatibility.character_costume_protector")
+CCP.Init(Mod)
+
+local CHAR_SETUP = {}
+
+DorkyMod.Misc.CHAR_SETUP = CHAR_SETUP
 
 ---@param player EntityPlayer
-function modSupport:AddCCPSupport(player, ccp)
-	ccp:AddPlayer(
+function CHAR_SETUP:ApplyCustomAnm2(player)
+	local data = player:GetData()
+	if not player:IsCoopGhost()
+		and not data.DorkyCustomAnm2Loaded
+	then
+		local sprite = player:GetSprite()
+		local playerType = player:GetPlayerType()
+		local name = playerType == Mod.PLAYER_DORKY and "dorky" or "spirit"
+		sprite:Load("gfx/characters/player_" .. name[playerType] .. ".anm2", true)
+		sprite:Play(sprite:GetDefaultAnimation(), true)
+		data.DorkyCustomAnm2Loaded = true
+	elseif player:IsCoopGhost()
+		and data.DorkyCustomAnm2Loaded
+	then
+		data.DorkyCustomAnm2Loaded = false
+	end
+end
+
+---@param player EntityPlayer
+function CHAR_SETUP:RestoreVanillaAnm2(player)
+	local data = player:GetData()
+	local playerType = player:GetPlayerType()
+	if playerType ~= Mod.PLAYER_DORKY
+		and playerType ~= Mod.PLAYER_DORKY_B
+		and data.DorkyCustomAnm2Loaded
+		and not player:IsCoopGhost()
+	then
+		local sprite = player:GetSprite()
+
+		data.DorkyCustomAnm2Loaded = nil
+		if playerType < PlayerType.NUM_PLAYER_TYPES and (
+				sprite:GetFilename() == "gfx/characters/player_dorky.anm2"
+				or sprite:GetFilename() == "gfx/characters/player_dorky_b.anm2"
+			) then
+			sprite:Load("gfx/001.000_player.anm2", true)
+			local fallbackSprites = {
+				[PlayerType.PLAYER_JACOB] = "gfx/characters/costumes/character_002x_jacob.png",
+				[PlayerType.PLAYER_ESAU] = "gfx/characters/costumes/character_003x_esau.png",
+				[PlayerType.PLAYER_THEFORGOTTEN_B] = "gfx/characters/costumes/character_016b_theforgotten.png",
+				[PlayerType.PLAYER_THESOUL_B] = "gfx/characters/costumes/character_017b_thesoul.png",
+			}
+			local colorToSuffix = {
+				[SkinColor.SKIN_PINK] = "",
+				[SkinColor.SKIN_WHITE] = "_white",
+				[SkinColor.SKIN_BLACK] = "_black",
+				[SkinColor.SKIN_BLUE] = "_blue",
+				[SkinColor.SKIN_RED] = "_red",
+				[SkinColor.SKIN_GREEN] = "_green",
+				[SkinColor.SKIN_GREY] = "_grey",
+				[SkinColor.SKIN_SHADOW] = "_shadow",
+			}
+
+			if not player:GetOtherTwin() then
+				--This automatically refreshes their default sprites
+				player:ChangePlayerType(playerType)
+			else
+				--Original twin will spawn a duplicate of their opposite twin with ChangePlayerType. Replace spritesheets directly instead
+				local skinPath = REPENTOGON and EntityConfig and EntityConfig.GetPlayer(playerType):GetSkinPath() or
+					fallbackSprites[playerType]
+				if playerType == PlayerType.PLAYER_JACOB or playerType == PlayerType.PLAYER_ESAU then
+					skinPath = string.gsub(skinPath, ".png", colorToSuffix[player:GetBodyColor()] .. ".png")
+				end
+				for layer = PlayerSpriteLayer.SPRITE_GLOW, PlayerSpriteLayer.SPRITE_BACK do
+					if layer ~= PlayerSpriteLayer.SPRITE_GHOST then
+						sprite:ReplaceSpritesheet(layer, skinPath)
+					end
+				end
+				sprite:LoadGraphics()
+			end
+
+			sprite:Play("WalkDown", true)
+			sprite:PlayOverlay("HeadDown", true)
+		end
+	end
+end
+
+Mod:AddCallback(ModCallbacks.MC_POST_PEFFECT_UPDATE, CHAR_SETUP.ApplyCustomAnm2, Mod.PLAYER_DORKY)
+Mod:AddCallback(ModCallbacks.MC_POST_PEFFECT_UPDATE, CHAR_SETUP.ApplyCustomAnm2, Mod.PLAYER_DORKY_B)
+Mod:AddCallback(ModCallbacks.MC_POST_PEFFECT_UPDATE, CHAR_SETUP.RestoreVanillaAnm2)
+
+---@param effect EntityEffect
+function CHAR_SETUP:RemoveDeadBodiesOnInit(effect)
+	local sprite = effect:GetSprite()
+	local filename = sprite:GetFilename()
+
+	if (filename == "gfx/characters/player_dorky.anm2"
+			or filename == "gfx/characters/player_dorky_b.anm2")
+		and sprite:IsPlaying("Death")
+	then
+		effect:Remove()
+	end
+end
+
+Mod:AddCallback(ModCallbacks.MC_POST_EFFECT_INIT, CHAR_SETUP.RemoveDeadBodiesOnInit, EffectVariant.DEVIL)
+
+---@param player EntityPlayer
+---@param cacheFlag CacheFlag
+function CHAR_SETUP:CharacterStats(player, cacheFlag)
+	local playerType = player:GetPlayerType()
+	if playerType ~= Mod.PLAYER_DORKY and playerType ~= Mod.PLAYER_DORKY_B then return end
+	local stats = playerType == Mod.PLAYER_DORKY and DORKY.StatsTable or THE_VOID.StatsTable
+
+	if cacheFlag == CacheFlag.CACHE_SPEED then
+		player.MoveSpeed = player.MoveSpeed + stats[cacheFlag]
+	elseif cacheFlag == CacheFlag.CACHE_FIREDELAY then
+		player.MaxFireDelay = player.MaxFireDelay * stats[cacheFlag]
+	elseif cacheFlag == CacheFlag.CACHE_DAMAGE then
+		player.Damage = player.Damage * stats[cacheFlag]
+	elseif cacheFlag == CacheFlag.CACHE_RANGE then
+		player.TearRange = player.TearRange + (stats[cacheFlag] * 40)
+	elseif cacheFlag == CacheFlag.CACHE_SHOTSPEED then
+		player.ShotSpeed = player.ShotSpeed + stats[cacheFlag]
+	elseif cacheFlag == CacheFlag.CACHE_LUCK then
+		player.Luck = player.Luck + stats[cacheFlag]
+	elseif cacheFlag == CacheFlag.CACHE_TEARFLAG then
+		player.TearFlags = player.TearFlags | stats[cacheFlag]
+	elseif cacheFlag == CacheFlag.CACHE_FLYING and stats[cacheFlag] then
+		player.CanFly = true
+	end
+end
+
+Mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, CHAR_SETUP.CharacterStats)
+
+---@param player EntityPlayer
+function CHAR_SETUP:AddPocketActive(player)
+	local playerType = player:GetPlayerType()
+	if player:GetActiveItem(ActiveSlot.SLOT_POCKET) == CollectibleType.COLLECTIBLE_NULL
+		and (playerType == Mod.PLAYER_DORKY or playerType == Mod.PLAYER_DORKY_B)
+	then
+		local itemID = playerType == Mod.PLAYER_DORKY and Mod.COLLECTIBLE_TONGUE_GRAPPLE or Mod.COLLECTIBLE_SOUL_DRAIN
+		player:SetPocketActiveItem(itemID, ActiveSlot.SLOT_POCKET, true)
+	end
+end
+
+---@param player EntityPlayer
+function CHAR_SETUP:AddCostumeProtection(player)
+	CCP:AddPlayer(
 		player,
-		g.PLAYER_DORKY,
+		Mod.PLAYER_DORKY,
 		"gfx/characters/costumes/character_dorky.png",
-		g.COSTUME_DORKY_FLIGHT,
+		DORKY.COSTUME_FLIGHT,
 		nil,
-		g.COSTUME_DORKY
+		DORKY.COSTUME
 	)
-	ccp:ItemCostumeWhitelist(
-		g.PLAYER_DORKY,
+	CCP:ItemCostumeWhitelist(
+		Mod.PLAYER_DORKY,
 		{
-			[g.COLLECTIBLE_TONGUE_GRAPPLE] = true,
+			[Mod.COLLECTIBLE_TONGUE_GRAPPLE] = true,
 			[CollectibleType.COLLECTIBLE_MOMS_BRA] = true,
 			[CollectibleType.COLLECTIBLE_HEART] = true,
 			[CollectibleType.COLLECTIBLE_9_VOLT] = true,
@@ -167,8 +309,8 @@ function modSupport:AddCCPSupport(player, ccp)
 			[CollectibleType.COLLECTIBLE_GLASS_EYE] = true,
 		}
 	)
-	ccp:NullItemIDWhitelist(
-		g.PLAYER_DORKY,
+	CCP:NullItemIDWhitelist(
+		Mod.PLAYER_DORKY,
 		{
 			[NullItemID.ID_PUBERTY] = true,
 			[NullItemID.ID_EMPTY_VESSEL] = true,
@@ -181,16 +323,16 @@ function modSupport:AddCCPSupport(player, ccp)
 			[NullItemID.ID_BATWING_WINGS] = true
 		}
 	)
-	ccp:AddPlayer(
+	CCP:AddPlayer(
 		player,
-		g.PLAYER_SPIRIT,
-		"gfx/characters/costumes/character_spirit.png",
+		Mod.PLAYER_DORKY_B,
+		"gfx/characters/costumes/character_dorky_b.png",
 		nil,
 		nil,
-		g.COSTUME_SPIRIT
+		THE_VOID.COSTUME
 	)
-	ccp:ItemCostumeWhitelist(
-		g.PLAYER_SPIRIT,
+	CCP:ItemCostumeWhitelist(
+		Mod.PLAYER_DORKY_B,
 		{
 			[CollectibleType.COLLECTIBLE_MOMS_BRA] = true,
 			[CollectibleType.COLLECTIBLE_HEART] = true,
@@ -344,8 +486,8 @@ function modSupport:AddCCPSupport(player, ccp)
 			[CollectibleType.COLLECTIBLE_GLASS_EYE] = true,
 		}
 	)
-	ccp:NullItemIDWhitelist(
-		g.PLAYER_SPIRIT,
+	CCP:NullItemIDWhitelist(
+		Mod.PLAYER_DORKY_B,
 		{
 			[NullItemID.ID_PUBERTY] = true,
 			[NullItemID.ID_EMPTY_VESSEL] = true,
@@ -358,42 +500,12 @@ function modSupport:AddCCPSupport(player, ccp)
 			[NullItemID.ID_BATWING_WINGS] = true
 		}
 	)
-end
-
-function modSupport:AddCoopGhostCompatibility()
-	if CustomCoopGhost then
-		CustomCoopGhost.ChangeSkin(g.PLAYER_DORKY, "dorky")
-		CustomCoopGhost.AddCostume(g.PLAYER_DORKY, "dorky")
-		CustomCoopGhost.ChangeSkin(g.PLAYER_SPIRIT, "spirit")
-		CustomCoopGhost.AddCostume(g.PLAYER_SPIRIT, "spirit")
-	end
-end
-
-function modSupport:AddPogCompatibility()
-	if Poglite then
-		local pogCostume = Isaac.GetCostumeIdByPath("gfx/characters/costume_dorky_pog.anm2")
-		Poglite:AddPogCostume("DorkyPog", g.PLAYER_DORKY, pogCostume)
-	end
-end
-
-function modSupport:AddNoCostumesCompatibility()
-	if NoCostumes then
-		addCostumeToIgnoreList("gfx/characters/costume_dorky.anm2")
-		addCostumeToIgnoreList("gfx/characters/costume_dorky_tongueout.anm2")
-		addCostumeToIgnoreList("gfx/characters/costume_dorky_flight.anm2")
-		addCostumeToIgnoreList("gfx/characters/costume_dorky_pog.anm2")
-		addCostumeToIgnoreList("gfx/characters/costume_spirit.anm2")
-	end
 end
 
 ---@param player EntityPlayer
-function modSupport:OnPlayerInit(player, ccp)
-	modSupport:AddCCPSupport(player, ccp)
-	modSupport:AddCoopGhostCompatibility()
-	modSupport:AddNoCostumesCompatibility()
-	if player:GetPlayerType() == g.PLAYER_DORKY then
-		modSupport:AddPogCompatibility()
-	end
+function CHAR_SETUP:OnPlayerInit(player)
+	CHAR_SETUP:AddCostumeProtection(player)
+	CHAR_SETUP:AddPocketActive(player)
 end
 
-return modSupport
+Mod:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, CHAR_SETUP.OnPlayerInit)

@@ -2,7 +2,7 @@
 	<Info CreatedBy="Unknown" CreatedOn="1/20/2023 10:34:46 AM" Version="16" Fps="30"/>
 	<Content>
 		<Spritesheets>
-			<Spritesheet Path="playerportrait_spirit.png" Id="0"/>
+			<Spritesheet Path="playerportrait_dorky_b.png" Id="0"/>
 		</Spritesheets>
 		<Layers>
 			<Layer Name="Player" Id="0" SpritesheetId="0"/>

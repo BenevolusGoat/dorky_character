@@ -1,51 +1,17 @@
----@diagnostic disable: param-type-mismatch
-local dorkyMechanics = {}
-local g = require("src_dorky.dorkyGlobals")
-local VeeHelper = require("src_dorky.veeHelper")
+local Mod = DorkyMod
 
----@param player EntityPlayer
-function dorkyMechanics:NoRedHealth(player)
-	local numHearts = player:GetMaxHearts()
-	if numHearts > 0 then
-		player:AddMaxHearts(-numHearts, true)
-		player:AddBlackHearts(numHearts)
-	end
-	if player:GetHearts() > 0 then
-		player:AddHearts(-player:GetHearts())
-	end
-end
+local TONGUE_GRAPPLE = {}
 
----@param heart EntityPickup
-function dorkyMechanics:IgnoreHeartPickups(heart)
-	if heart.SubType == HeartSubType.HEART_FULL or heart.SubType == HeartSubType.HEART_HALF then
-		return false
-	elseif heart.SubType == HeartSubType.HEART_BLENDED then
-		heart:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_HEART, HeartSubType.HEART_SOUL)
-		local sprite = heart:GetSprite()
-		sprite:ReplaceSpritesheet(0, "gfx/fake_blended.png")
-		sprite:ReplaceSpritesheet(1, "gfx/fake_blended.png")
-		sprite:LoadGraphics()
-		heart.EntityCollisionClass = EntityCollisionClass.ENTCOLL_ALL
-		return true
-	end
-end
+DorkyMod.Item.TONGUE_GRAPPLE = TONGUE_GRAPPLE
 
----@param player EntityPlayer
-function dorkyMechanics:PocketActiveStart(player)
-	local playerType = player:GetPlayerType()
-	if g.game:GetFrameCount() == 0 or g.game:GetRoom():GetFrameCount() > 0 then
-		if playerType == g.PLAYER_DORKY and player:GetActiveItem(ActiveSlot.SLOT_POCKET) ~= g.COLLECTIBLE_TONGUE_GRAPPLE then
-			player:SetPocketActiveItem(g.COLLECTIBLE_TONGUE_GRAPPLE, ActiveSlot.SLOT_POCKET, false)
-		elseif playerType == g.PLAYER_SPIRIT and player:GetActiveItem(ActiveSlot.SLOT_POCKET) ~= g.COLLECTIBLE_SOUL_DRAIN then
-			player:SetPocketActiveItem(g.COLLECTIBLE_SOUL_DRAIN, ActiveSlot.SLOT_POCKET, false)
-		end
-	end
-end
-
+TONGUE_GRAPPLE.COSTUME = Isaac.GetCostumeIdByPath("gfx/characters/costume_dorky_tongue_out.anm2")
+TONGUE_GRAPPLE.MOVEMENT_HANDLER = Isaac.GetEntityVariantByName("Dorky Tongue Rope Movement Handler")
+TONGUE_GRAPPLE.DUMMY_TARGET = Isaac.GetEntityVariantByName("Dorky Tongue Dummy Target")
+--[[
 ---@param effect EntityEffect
 ---@param player EntityPlayer
 local function RemoveTongue(effect, player)
-	player:ToPlayer():TryRemoveNullCostume(g.COSTUME_DORKY_TONGUE)
+	player:ToPlayer():TryRemoveNullCostume(TONGUE_GRAPPLE.COSTUME)
 	if effect.Child then
 		effect.Child:Remove()
 	end
@@ -53,16 +19,10 @@ local function RemoveTongue(effect, player)
 end
 
 ---@param player EntityPlayer
-function dorkyMechanics:PreTongueUse(_, _, player)
-	local npc = VeeHelper.DetectNearestEnemy(player, 400)
+function TONGUE_GRAPPLE:PreTongueUse(_, _, player)
+	local npc = Mod:GetClosestEnemy(player.Position, 400)
 
-	if npc
-		and npc:IsVulnerableEnemy()
-		and not npc:IsInvincible()
-		and not npc:IsDead()
-		and not npc:HasEntityFlags(EntityFlag.FLAG_CHARM)
-		and not npc:HasEntityFlags(EntityFlag.FLAG_FRIENDLY)
-	then
+	if npc then
 		local npcData = npc:GetData()
 		if not npcData.IsDorkyTongued then
 			local data = player:GetData()
@@ -74,17 +34,18 @@ function dorkyMechanics:PreTongueUse(_, _, player)
 end
 
 ---@param player EntityPlayer
-function dorkyMechanics:OnTongueUse(_, _, player)
+function TONGUE_GRAPPLE:OnTongueUse(_, _, player)
 	local data = player:GetData()
 	local shouldDischarge = data.DorkyEnemyFound or false
 
 	if data.DorkyEnemyFound then
-		player:AddNullCostume(g.COSTUME_DORKY_TONGUE)
+		player:AddNullCostume(TONGUE_GRAPPLE.COSTUME)
 		local npc = data.DorkyEnemyFound
 		local npcData = npc:GetData()
-		local movementHandler = Isaac.Spawn(EntityType.ENTITY_EFFECT, g.DORKY_TONGUE_ROPE_HANDLER, 0, player.Position,
+		local movementHandler = Isaac.Spawn(EntityType.ENTITY_EFFECT, TONGUE_GRAPPLE.MOVEMENT_HANDLER, 0, player
+		.Position,
 			(npc.Position - player.Position):Normalized():Resized(35), nil)
-		local dummyTarget = Isaac.Spawn(EntityType.ENTITY_EFFECT, g.DORKY_TONGUE_DUMMY_TARGET, 0, player.Position,
+		local dummyTarget = Isaac.Spawn(EntityType.ENTITY_EFFECT, TONGUE_GRAPPLE.DUMMY_TARGET, 0, player.Position,
 			Vector.Zero
 			, player)
 		local evisCord = Isaac.Spawn(EntityType.ENTITY_EVIS, 10, 1, player.Position, Vector.Zero, player)
@@ -129,10 +90,10 @@ function dorkyMechanics:OnTongueUse(_, _, player)
 end
 
 ---@param evisCord EntityNPC
-function dorkyMechanics:TongueUpdate(evisCord)
+function TONGUE_GRAPPLE:TongueUpdate(evisCord)
 	local data = evisCord:GetData()
 	if not data.IsDorkyTongue or evisCord.Variant ~= 10 or evisCord.SubType ~= 1 then return end
-	if evisCord.Target.Type == EntityType.ENTITY_EFFECT and evisCord.Target.Variant == g.DORKY_TONGUE_DUMMY_TARGET then
+	if evisCord.Target.Type == EntityType.ENTITY_EFFECT and evisCord.Target.Variant == TONGUE_GRAPPLE.DUMMY_TARGET then
 		return false
 	end
 end
@@ -175,7 +136,7 @@ local function NoBirthrightOrDurationDependent(player, handlerData, numBounces, 
 end
 
 ---@param effect EntityEffect
-function dorkyMechanics:TongueHandlerUpdate(effect)
+function TONGUE_GRAPPLE:TongueHandlerUpdate(effect)
 	local player = effect.Parent:ToPlayer()
 	local data = effect:GetData()
 
@@ -218,7 +179,7 @@ function dorkyMechanics:TongueHandlerUpdate(effect)
 			end
 
 			if NoBirthrightOrDurationDependent(player, data, 3, 0) then
-				effect.Velocity = VeeHelper.SmoothLerp(effect.Velocity, targetVec,
+				effect.Velocity = Mod:SmoothLerp(effect.Velocity, targetVec,
 					math.min(0.1 + data.DorkyTongueLifetime / 10), 1)
 			end
 
@@ -285,7 +246,7 @@ local headDirs = {
 	[Direction.DOWN]         = Vector(0, 1),
 }
 
-function dorkyMechanics:dummyTongueTargetAI(e)
+function TONGUE_GRAPPLE:dummyTongueTargetAI(e)
 	if not e.Child then
 		e:Remove()
 	elseif e.Parent then
@@ -296,7 +257,7 @@ function dorkyMechanics:dummyTongueTargetAI(e)
 	end
 end
 
-function dorkyMechanics:IgnoreTonguedNPCCollision(npc, collider)
+function TONGUE_GRAPPLE:IgnoreTonguedNPCCollision(npc, collider)
 	local data = npc:GetData()
 
 	if data.DorkyTonguedNPC ~= nil
@@ -306,7 +267,7 @@ function dorkyMechanics:IgnoreTonguedNPCCollision(npc, collider)
 	end
 end
 
-function dorkyMechanics:TonguedNPCUpdate(npc)
+function TONGUE_GRAPPLE:TonguedNPCUpdate(npc)
 	local data = npc:GetData()
 	if not data.DorkyTonguedNPC then return end
 	if data.DorkyTonguedNPC > 0 then
@@ -316,11 +277,11 @@ function dorkyMechanics:TonguedNPCUpdate(npc)
 	end
 end
 
-function dorkyMechanics:Debug()
-	--[[ local duration = 0
+function TONGUE_GRAPPLE:Debug()
+	local duration = 0
 	local bounces = "nil"
 
-	for _, h in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, g.DORKY_TONGUE_ROPE_HANDLER, 0)) do
+	for _, h in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, TONGUE_GRAPPLE.MOVEMENT_HANDLER, 0)) do
 		local data = h:GetData()
 
 		if data.DorkyTongueBounces then
@@ -332,7 +293,5 @@ function dorkyMechanics:Debug()
 	end
 
 	Isaac.RenderText("Tongue Duration: " .. tostring(duration), 50, 50, 1, 1, 1, 1)
-	Isaac.RenderText("Tongue Bounces: " .. tostring(bounces), 50, 70, 1, 1, 1, 1) ]]
-end
-
-return dorkyMechanics
+	Isaac.RenderText("Tongue Bounces: " .. tostring(bounces), 50, 70, 1, 1, 1, 1)
+end ]]

@@ -5,10 +5,10 @@
 		 nameimage="playername_dorky.png" 
 		 portrait="playerportrait_dorky.png" skinColor="5" costumeSuffix="dorky"
 		 birthright="Paddle your enemies" />
-	<player name="The Void" bSkinParent="Dorky" skin="character_spirit.png" black="8"
-		 nameimage="playername_spirit.png"
-		 portrait="" skinColor="6" costumeSuffix="spirit"
-		 extraportrait="extraportrait_spirit.anm2"
+	<player name="The Void" bSkinParent="Dorky" skin="character_dorky_b.png" black="8"
+		 nameimage="playername_dorky_b.png"
+		 portrait="" skinColor="6" costumeSuffix="dorky_b"
+		 extraportrait="extraportrait_dorky_b.anm2"
 		 birthright="More soul healing"
 		 />
 </players>

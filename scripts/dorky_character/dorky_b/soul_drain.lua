@@ -1,33 +1,37 @@
-local spiritMechanics = {}
-local g = require("src_dorky.dorkyGlobals")
-local VeeHelper = require("src_dorky.veeHelper")
-local sfx = SFXManager()
+local Mod = DorkyMod
 
-local maxNPCAttachDuration = 120
-local spikeCollisionRadius = 25
-local maxDistanceFromNPCWhenAttached = 200
-local spikeInitVelocity = 30
+local SOUL_DRAIN = {}
 
+DorkyMod.Item.SOUL_DRAIN = {}
+
+SOUL_DRAIN.MOVEMENT_HANDLER = Isaac.GetEntityVariantByName("Soul Drain Rope Movement Handler")
+SOUL_DRAIN.DUMMY_TARGET = Isaac.GetEntityVariantByName("Soul Drain Dummy Target")
+
+SOUL_DRAIN.BASE_DMG = 4.20
+SOUL_DRAIN.DMG_MULT = 4
+SOUL_DRAIN.MAX_NPC_ATTACH_DURATION = 120
+SOUL_DRAIN.COLLISION_RADIUS = 25
+SOUL_DRAIN.MAX_SPIKE_DISTANCE = 200
+SOUL_DRAIN.INIT_VELOCITY = 30
+--[[
 ---@param player EntityPlayer
-local function getSpiritSpikeSuccDuration(player)
+function SOUL_DRAIN:GetDrainDuration(player)
 	local maxSpikeFireDelay = 0.5
 	local firedelay = player.MaxFireDelay >= maxSpikeFireDelay and player.MaxFireDelay or maxSpikeFireDelay
 	return firedelay * 3
 end
 
 ---@param player EntityPlayer
-local function getSpiritSikeDamage(player)
+function SOUL_DRAIN:GetDrainDamage(player)
 	return player.Damage * 2 + 1.5
 end
 
 ---@param player EntityPlayer
-local function getSpiritSpikeSuccDamageRequirement(player)
-	local baseDmg = 4.20
-	local spikeDamage = getSpiritSikeDamage(player)
-	local dmgRequirement = math.ceil(spikeDamage * (4 + (baseDmg / player.Damage * 4)))
-	if dmgRequirement < spikeDamage * 4 then
-		dmgRequirement = spikeDamage * 4
-	end
+function SOUL_DRAIN:GetDamageRequirement(player)
+	local spikeDamage = SOUL_DRAIN:GetDrainDamage(player)
+	local minDmg = spikeDamage * SOUL_DRAIN.DMG_MULT
+	local mult = (SOUL_DRAIN.BASE_DMG / player.Damage * SOUL_DRAIN.DMG_MULT)
+	local dmgRequirement = math.ceil(math.max(minDmg, minDmg * mult))
 	return dmgRequirement
 end
 
@@ -39,95 +43,11 @@ local function RemoveSpiritSpike(effect)
 	effect:Remove()
 end
 
-local function CountBits(mask)
-	local count = 0
-	while mask ~= 0 do
-		count = count + 1
-		mask = mask & mask - 1
-	end
-
-	return count
-end
-
----@param player EntityPlayer
----@param heartSubType HeartSubType | nil
----@param numSoulHearts integer | nil
-local function hasUnchargedAlabaster(player, heartSubType, numSoulHearts)
-	local shouldGetSoul = false
-	local boxes = VeeHelper.GetActiveItemCharges(player, CollectibleType.COLLECTIBLE_ALABASTER_BOX)
-	local maxCharge = Isaac.GetItemConfig():GetCollectible(CollectibleType.COLLECTIBLE_ALABASTER_BOX).MaxCharges
-	for _, charge in pairs(boxes) do
-		if charge < maxCharge then
-			if heartSubType and
-				(
-				(heartSubType == HeartSubType.HEART_HALF_SOUL and charge == maxCharge - 1)
-					or (heartSubType == HeartSubType.HEART_SOUL and charge <= maxCharge - 2)
-				)
-				or numSoulHearts and
-				(
-				charge + numSoulHearts >= maxCharge
-				) then
-				shouldGetSoul = true
-			end
-		end
-	end
-	return shouldGetSoul
-end
-
----@param player EntityPlayer
-function spiritMechanics:onlyBlackHealth(player)
-	local redHearts = player:GetMaxHearts()
-	local redHealth = player:GetHearts()
-	local boneHearts = player:GetBoneHearts()
-	local blackHearts = CountBits(player:GetBlackHearts()) * 2
-	local soulHearts = player:GetSoulHearts() - blackHearts
-	local eternalHearts = player:GetEternalHearts()
-	local heartLimit = player:GetHeartLimit()
-	local hasMaxHearts = redHearts + (boneHearts * 2) + soulHearts + blackHearts == heartLimit
-
-	if redHearts > 0 then
-		player:AddMaxHearts(-redHearts, true)
-	end
-	if redHealth > 0 then
-		player:AddHearts(-redHealth)
-	end
-	if boneHearts > 0 then
-		player:AddBoneHearts(-boneHearts)
-	end
-	if not hasUnchargedAlabaster(player, nil, soulHearts) and soulHearts > 0 then
-		player:AddSoulHearts(-soulHearts)
-	end
-	if eternalHearts > 0 then
-		player:AddEternalHearts(-eternalHearts)
-	end
-
-	if hasMaxHearts then
-		player:AddBlackHearts(heartLimit - blackHearts)
-	end
-end
-
----@param heart EntityPickup
----@param player EntityPlayer
-function spiritMechanics:ignoreMostHearts(heart, player)
-	if heart.SubType ~= HeartSubType.HEART_BLACK
-		and heart.SubType ~= HeartSubType.HEART_GOLDEN
-	then
-		---@type boolean | nil
-		local shouldCollide = false
-		if heart.SubType == HeartSubType.HEART_SOUL
-			or heart.SubType == HeartSubType.HEART_HALF_SOUL
-		then
-			local alabaster = hasUnchargedAlabaster(player, heart.SubType, nil)
-			if alabaster == true then shouldCollide = nil end
-		end
-
-		return shouldCollide
-	end
-end
+--TODO: ThrowableItemLib
 
 ---@param itemID CollectibleType
 ---@param player EntityPlayer
-function spiritMechanics:onSoulStealUse(itemID, _, player)
+function SOUL_DRAIN:onSoulStealUse(itemID, _, player)
 	local data = player:GetData()
 
 	if itemID == g.COLLECTIBLE_SOUL_DRAIN
@@ -149,12 +69,12 @@ function spiritMechanics:onSoulStealUse(itemID, _, player)
 end
 
 ---@param player EntityPlayer
-function spiritMechanics:shouldThrowSpiritSpike(player)
+function SOUL_DRAIN:shouldThrowSpiritSpike(player)
 	local data = player:GetData()
 
 	if data.canThrowSpiritSpike then
 		if player:GetFireDirection() ~= Direction.NO_DIRECTION then
-			spiritMechanics:throwSpiritSpike(player)
+			SOUL_DRAIN:throwSpiritSpike(player)
 			player:SetActiveCharge(0, ActiveSlot.SLOT_POCKET)
 			player:AnimateCollectible(g.COLLECTIBLE_SOUL_DRAIN, "HideItem")
 		end
@@ -177,11 +97,12 @@ function spiritMechanics:shouldThrowSpiritSpike(player)
 end
 
 ---@param player EntityPlayer
-function spiritMechanics:throwSpiritSpike(player)
+function SOUL_DRAIN:ThrowSoulDrainSpike(player)
 	local pData = player:GetData()
-	local dir = VeeHelper.DirectionToVector(player:GetFireDirection()):Resized(spikeInitVelocity)
-	local movementHandler = Isaac.Spawn(EntityType.ENTITY_EFFECT, g.SPIRIT_SPIKE_ROPE_HANDLER, 0, player.Position, dir, player)
-	local dummyTarget = Isaac.Spawn(EntityType.ENTITY_EFFECT, g.SPIRIT_SPIKE_DUMMY_TARGET, 0, player.Position, Vector.Zero,
+	local dir = VeeHelper.DirectionToVector(player:GetFireDirection()):Resized(SOUL_DRAIN.INIT_VELOCITY)
+	local movementHandler = Isaac.Spawn(EntityType.ENTITY_EFFECT, SOUL_DRAIN.MOVEMENT_HANDLER, 0, player.Position, dir,
+		player)
+	local dummyTarget = Isaac.Spawn(EntityType.ENTITY_EFFECT, SOUL_DRAIN.DUMMY_TARGET, 0, player.Position, Vector.Zero,
 		player)
 	local evisCord = Isaac.Spawn(EntityType.ENTITY_EVIS, 10, 1, player.Position, Vector.Zero, player)
 	local sprite = evisCord:GetSprite()
@@ -208,29 +129,29 @@ function spiritMechanics:throwSpiritSpike(player)
 	movementHandler:Update()
 	pData.canThrowSpiritSpike = false
 	pData.spiritSpike = movementHandler
-	sfx:Play(SoundEffect.SOUND_WHIP)
+	Mod.SFX:Play(SoundEffect.SOUND_WHIP)
 end
 
 ---@param evisCord EntityNPC
-function spiritMechanics:evisCordSpikeUpdate(evisCord)
+function SOUL_DRAIN:evisCordSpikeUpdate(evisCord)
 	local data = evisCord:GetData()
 	if not data.IsSpiritSpike or evisCord.Variant ~= 10 or evisCord.SubType ~= 1 then return end
-	if evisCord.Target.Type == EntityType.ENTITY_EFFECT and evisCord.Target.Variant == g.SPIRIT_SPIKE_DUMMY_TARGET then
+	if evisCord.Target.Type == EntityType.ENTITY_EFFECT and evisCord.Target.Variant == SOUL_DRAIN.DUMMY_TARGET then
 		return false
 	end
 end
 
 ---@param ent Entity
 ---@param source EntityRef
-function spiritMechanics:onSpikeDamage(ent, amount, _, source, _)
+function SOUL_DRAIN:onSpikeDamage(ent, amount, _, source, _)
 	if source.Entity and source.Entity:ToEffect()
-		and source.Entity.Variant == g.SPIRIT_SPIKE_ROPE_HANDLER
+		and source.Entity.Variant == SOUL_DRAIN.MOVEMENT_HANDLER
 	then
 		local data = source.Entity.Parent:ToPlayer():GetData()
 		if not data.checkNPCRemainingHealth then
 			data.checkNPCRemainingHealth = {}
 		end
-		table.insert(data.checkNPCRemainingHealth, { ent:ToNPC(), ent.HitPoints, g.game:GetRoom():GetFrameCount() })
+		table.insert(data.checkNPCRemainingHealth, { ent:ToNPC(), ent.HitPoints, Mod.Game:GetRoom():GetFrameCount() })
 	end
 end
 
@@ -244,7 +165,7 @@ local function shouldNPCGetSpiritSpiked(npc)
 		and not npc:IsDead()
 		and not npc:HasEntityFlags(EntityFlag.FLAG_CHARM)
 		and not npc:HasEntityFlags(EntityFlag.FLAG_FRIENDLY)
-		and g.game:GetRoom():IsPositionInRoom(npc.Position, -30)
+		and Mod.Game:GetRoom():IsPositionInRoom(npc.Position, -30)
 	then
 		return true
 	else
@@ -253,13 +174,14 @@ local function shouldNPCGetSpiritSpiked(npc)
 end
 
 ---@param effect EntityEffect
-function spiritMechanics:tryStickToNPC(effect)
-	local player = effect.Parent:ToPlayer()
+function SOUL_DRAIN:tryStickToNPC(effect)
+	local player = effect.Parent and effect.Parent:ToPlayer()
+	if not player then return end
 	local pData = player:GetData()
 	local data = effect:GetData()
 
 	if not data.securedNPC and not data.hadCaughtNPC then
-		local npc = pData.checkNPCNextFrame or VeeHelper.DetectNearestEnemy(effect, spikeCollisionRadius)
+		local npc = pData.checkNPCNextFrame or Mod:GetClosestEnemy(effect.Position, SOUL_DRAIN.COLLISION_RADIUS)
 
 		if npc and shouldNPCGetSpiritSpiked(npc) then
 			if not pData.checkNPCNextFrame then
@@ -270,25 +192,26 @@ function spiritMechanics:tryStickToNPC(effect)
 				data.securedNPC = true
 				data.NPCTarget = npc
 				data.hadCaughtNPC = true
-				data.attachDuration = maxNPCAttachDuration
+				data.attachDuration = SOUL_DRAIN.MAX_NPC_ATTACH_DURATION
 				npc:GetData().caughtOnSpiritSpike = true
 				npc:GetData().spiritSpikeShouldFlash = npc:HasEntityFlags(EntityFlag.FLAG_NO_FLASH_ON_DAMAGE)
 				effect.Velocity = Vector.Zero
-				npc:AddSlowing(EntityRef(player), maxNPCAttachDuration, 0.1, Color(0.2, 0.2, 0.2))
-				sfx:Play(SoundEffect.SOUND_WHIP_HIT)
+				npc:AddSlowing(EntityRef(player), SOUL_DRAIN.MAX_NPC_ATTACH_DURATION, 0.1, Color(0.2, 0.2, 0.2))
+				Mod.SFX:Play(SoundEffect.SOUND_WHIP_HIT)
 				pData.checkNPCNextFrame = nil
 			end
 		elseif pData.checkNPCNextFrame then
 			pData.checkNPCNextFrame = nil
-			spiritMechanics:tryStickToNPC(effect)
+			SOUL_DRAIN:tryStickToNPC(effect)
 		end
 	end
 end
 
 ---@param effect EntityEffect
-function spiritMechanics:drainAttachedNPC(effect)
+function SOUL_DRAIN:drainAttachedNPC(effect)
+	local player = effect.Parent and effect.Parent:ToPlayer()
+	if not player then return end
 	local data = effect:GetData()
-	local player = effect.Parent:ToPlayer()
 
 	---@type EntityNPC
 	data.NPCTarget = data.NPCTarget
@@ -306,11 +229,11 @@ function spiritMechanics:drainAttachedNPC(effect)
 	--Shoutouts to Warden from Fiend Folio
 	local distance = player.Position:Distance(data.NPCTarget.Position)
 
-	if player.Position:Distance(data.NPCTarget.Position) > maxDistanceFromNPCWhenAttached then
+	if player.Position:Distance(data.NPCTarget.Position) > SOUL_DRAIN.MAX_SPIKE_DISTANCE then
 		player.Velocity = player.Velocity +
-			(data.NPCTarget.Position - player.Position):Resized(math.min(10, distance - maxDistanceFromNPCWhenAttached))
+			(data.NPCTarget.Position - player.Position):Resized(math.min(10, distance - SOUL_DRAIN.MAX_SPIKE_DISTANCE))
 		player.Position = data.NPCTarget.Position +
-			(player.Position - data.NPCTarget.Position):Resized(maxDistanceFromNPCWhenAttached)
+			(player.Position - data.NPCTarget.Position):Resized(SOUL_DRAIN.MAX_SPIKE_DISTANCE)
 	end
 
 	if data.NPCTarget:GetData().spiritSpikeShouldFlash
@@ -320,17 +243,17 @@ function spiritMechanics:drainAttachedNPC(effect)
 	end
 
 	if not data.timeTillHealthDrain then
-		data.timeTillHealthDrain = getSpiritSpikeSuccDuration(player)
+		data.timeTillHealthDrain = SOUL_DRAIN:GetDrainDuration(player)
 	elseif data.timeTillHealthDrain > 0 then
 		data.timeTillHealthDrain = data.timeTillHealthDrain - 1
 	elseif not data.checkRemainingHealth then
 		if data.NPCTarget:GetData().spiritSpikeShouldFlash then
 			data.NPCTarget:ClearEntityFlags(EntityFlag.FLAG_NO_FLASH_ON_DAMAGE)
 		end
-		data.NPCTarget:TakeDamage(getSpiritSikeDamage(player), 0, EntityRef(effect), 0)
+		data.NPCTarget:TakeDamage(SOUL_DRAIN:GetDrainDamage(player), 0, EntityRef(effect), 0)
 		data.NPCTarget:SetColor(Color(0, 0, 0, data.NPCTarget.Color.A), 10, 6, true, false)
-		sfx:Play(SoundEffect.SOUND_ROTTEN_HEART, 1.5, 2, false, 0.7, 0)
-		data.timeTillHealthDrain = getSpiritSpikeSuccDuration(player)
+		Mod.SFX:Play(SoundEffect.SOUND_ROTTEN_HEART, 1.5, 2, false, 0.7, 0)
+		data.timeTillHealthDrain = SOUL_DRAIN:GetDrainDuration(player)
 	end
 
 	if data.attachDuration then
@@ -343,7 +266,7 @@ function spiritMechanics:drainAttachedNPC(effect)
 end
 
 ---@param effect EntityEffect
-function spiritMechanics:spiritSpikeHandlerUpdate(effect)
+function SOUL_DRAIN:spiritSpikeHandlerUpdate(effect)
 	local player = effect.Parent:ToPlayer()
 	local data = effect:GetData()
 
@@ -354,9 +277,8 @@ function spiritMechanics:spiritSpikeHandlerUpdate(effect)
 	end
 
 	if player and player:Exists() and not player:IsDead() then
-
 		player:SetActiveCharge(0, ActiveSlot.SLOT_POCKET)
-		spiritMechanics:tryStickToNPC(effect)
+		SOUL_DRAIN:tryStickToNPC(effect)
 
 		if data.spiritSpikeLifetime > 9 and not data.securedNPC then
 			--Pulling spike back to player
@@ -365,7 +287,7 @@ function spiritMechanics:spiritSpikeHandlerUpdate(effect)
 				targetVec = targetVec:Resized(30)
 			end
 
-			effect.Velocity = VeeHelper.SmoothLerp(effect.Velocity, targetVec, math.min(0.1 + 8 / 10), 1)
+			effect.Velocity = Mod:SmoothLerp(effect.Velocity, targetVec, math.min(0.1 + 8 / 10), 1)
 
 			if effect.Position:Distance(player.Position) < 30 then
 				RemoveSpiritSpike(effect)
@@ -380,7 +302,7 @@ function spiritMechanics:spiritSpikeHandlerUpdate(effect)
 			effect.Velocity = effect.Velocity * 0.3
 		end
 		if data.securedNPC then
-			spiritMechanics:drainAttachedNPC(effect)
+			SOUL_DRAIN:drainAttachedNPC(effect)
 		end
 	else
 		RemoveSpiritSpike(effect)
@@ -395,9 +317,9 @@ local function spawnBlackHeartIndicator(player)
 end
 
 ---@param player EntityPlayer
-function spiritMechanics:healFromSpiritSpike(player)
+function SOUL_DRAIN:healFromSpiritSpike(player)
 	local data = player:GetData()
-	local dmgRequirement = getSpiritSpikeSuccDamageRequirement(player)
+	local dmgRequirement = SOUL_DRAIN:GetDamageRequirement(player)
 	local dmgToAdd = 0
 	local entsToRemove = {}
 
@@ -410,7 +332,7 @@ function spiritMechanics:healFromSpiritSpike(player)
 			local frameHit = npcTable[3]
 			local hasBeenChecked = npcTable[4]
 
-			if g.game:GetRoom():GetFrameCount() >= frameHit + 2 and not hasBeenChecked then
+			if Mod.Game:GetRoom():GetFrameCount() >= frameHit + 2 and not hasBeenChecked then
 				local npcHitPoints = npc:IsDead() and npc.HitPoints < 0 and 0 or npc.HitPoints
 				local damageDone = oldHitPoints - npcHitPoints
 
@@ -440,13 +362,13 @@ function spiritMechanics:healFromSpiritSpike(player)
 			numHeartsAdded = numHeartsAdded + 1
 		end
 		spawnBlackHeartIndicator(player)
-		sfx:Play(SoundEffect.SOUND_VAMP_GULP)
+		Mod.SFX:Play(SoundEffect.SOUND_VAMP_GULP)
 		data.spikeDamageBank = data.spikeDamageBank - (dmgRequirement * numHeartsAdded)
 	end
 end
 
 ---@param e EntityEffect
-function spiritMechanics:dummySpikeTargetAI(e)
+function SOUL_DRAIN:dummySpikeTargetAI(e)
 	if not e.Child then
 		e:Remove()
 	elseif e.Parent then
@@ -458,10 +380,10 @@ function spiritMechanics:dummySpikeTargetAI(e)
 end
 
 ---@param npc EntityNPC
-function spiritMechanics:restoreFlashOnDamage(npc)
+function SOUL_DRAIN:restoreFlashOnDamage(npc)
 	if npc:GetData().spiritSpikeShouldFlash == nil then return end
 	local notConnectedToSpike = true
-	for _, spike in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, g.SPIRIT_SPIKE_ROPE_HANDLER)) do
+	for _, spike in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, SOUL_DRAIN.MOVEMENT_HANDLER)) do
 		if spike:GetData().securedNPC == false and GetPtrHash(spike:GetData().NPCTarget) == GetPtrHash(npc) then
 			notConnectedToSpike = false
 		end
@@ -474,20 +396,4 @@ function spiritMechanics:restoreFlashOnDamage(npc)
 	end
 end
 
----@param player EntityPlayer
-function spiritMechanics:voidRegeneration(player)
-	local stage = g.game:GetLevel():GetStage()
-
-	if stage == LevelStage.STAGE7 then
-		if g.game.TimeCounter % 60 == 0
-			and VeeHelper.RandomNum(1) == 1
-		then
-			player:AddBlackHearts(1)
-			spawnBlackHeartIndicator(player)
-			player:SetColor(Color(0, 0, 0), 10, 0, true, false)
-			sfx:Play(SoundEffect.SOUND_UNHOLY)
-		end
-	end
-end
-
-return spiritMechanics
+ ]]

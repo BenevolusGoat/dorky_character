@@ -1,60 +1,96 @@
-local mod = RegisterMod("TestMod", 1)
-local g = require("src_dorky.dorkyGlobals")
-local ccp = require("src_dorky.characterCostumeProtector")
-ccp:Init(mod)
-local dorkyStats = include("src_dorky.dorkyStats")
-local dorkyMechanics = include("src_dorky.dorkyMechanics")
-local dorkyMisc = include("src_dorky.dorkyMisc")
-local modSupport = include("src_dorky.modSupport")
-local spiritMechanics = include("src_dorky.spiritMechanics")
-local spiritHUDRender = include("src_dorky.hudRender")
+---@class ModReference
+_G.DorkyMod = RegisterMod("Dorky", 1)
 
----@param player EntityPlayer
-function mod:OnPlayerInit(player)
-	local playerType = player:GetPlayerType()
+DorkyMod.Version = "1.2"
 
-	if playerType == g.PLAYER_DORKY or playerType == g.PLAYER_SPIRIT then
-		modSupport:OnPlayerInit(player, ccp)
-		dorkyMechanics:PocketActiveStart(player)
+---@class ModReference
+local Mod = DorkyMod
+
+DorkyMod.Game = Game()
+DorkyMod.SFX = SFXManager()
+
+DorkyMod.GENERIC_RNG = RNG()
+
+DorkyMod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function()
+	local seed = DorkyMod.Game:GetSeeds():GetStartSeed()
+	DorkyMod.GENERIC_RNG:SetSeed(seed)
+end)
+
+DorkyMod.RANGE_BASE_MULT = 40
+
+DorkyMod.Character = {}
+DorkyMod.Item = {}
+DorkyMod.Misc = {}
+
+DorkyMod.PLAYER_DORKY = Isaac.GetPlayerTypeByName("Dorky", false)
+DorkyMod.PLAYER_DORKY_B = Isaac.GetPlayerTypeByName("The Void", true)
+DorkyMod.COLLECTIBLE_TONGUE_GRAPPLE = Isaac.GetItemIdByName("Tongue Grapple")
+DorkyMod.COLLECTIBLE_SOUL_DRAIN = Isaac.GetItemIdByName("Soul Drain")
+
+DorkyMod.FileLoadError = false
+DorkyMod.InvalidPathError = false
+
+---Mimics include() but with a pcall safety wrapper and appropriate error codes if any are found
+---
+---VSCode users: Go to Settings > Lua > Runtime:Special and link Eldritch.Include to require, just like you would regular include!
+---@return unknown
+function DorkyMod.Include(path)
+	Isaac.DebugString(string.format("[%s] Loading " .. path, Mod.Name))
+	local wasLoaded, result = pcall(include, path)
+	local errMsg = ""
+	local foundError = false
+	if not wasLoaded then
+		DorkyMod.FileLoadError = true
+		foundError = true
+		errMsg = 'Error in path "' .. path .. '":\n' .. result .. '\n'
+	elseif result and type(result) == "string" and string.find(result, "no file '") then
+		foundError = true
+		DorkyMod.InvalidPathError = true
+		errMsg = 'Unable to locate file in path "' .. path .. '"\n'
+	end
+	if foundError then
+		DorkyMod:Log(errMsg)
+	end
+	return result
+end
+
+function DorkyMod.LoopInclude(tab, path)
+	for _, fileName in pairs(tab) do
+		DorkyMod.Include(path .. "." .. fileName)
 	end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, mod.OnPlayerInit, 0)
-mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, dorkyStats.OnCache)
+local tools = {
+	"debug_tools",
+	"hud_helper"
+}
+
+local helpers = {
+	"misc_util"
+}
+
+Mod.LoopInclude(tools, "scripts.tools")
+Mod.LoopInclude(helpers, "scripts.helpers")
+
+
+local characters = {
+	"dorky.character_dorky",
+	"dorky.tongue_grapple",
+	"dorky_b.character_dorky_b",
+	"dorky_b.soul_drain"
+}
+
+Mod.LoopInclude(characters, "scripts.dorky_character")
+
+--[[
 
 ---@param player EntityPlayer
 function mod:OnPlayerUpdate(player)
-	local playerType = player:GetPlayerType()
-
-	dorkyMisc:customAnm2Handling(player)
-
-	if playerType == g.PLAYER_DORKY then
-		dorkyMechanics:NoRedHealth(player)
-		dorkyMisc:spawnBlackGoopOnDeath(player)
-	elseif playerType == g.PLAYER_SPIRIT then
-		spiritMechanics:onlyBlackHealth(player)
-		spiritMechanics:healFromSpiritSpike(player)
-		spiritMechanics:shouldThrowSpiritSpike(player)
-		spiritMechanics:voidRegeneration(player)
-		dorkyMisc:spiritDeathEffects(player)
-	end
+	spiritMechanics:healFromSpiritSpike(player)
+	spiritMechanics:shouldThrowSpiritSpike(player)
 end
 
 mod:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, mod.OnPlayerUpdate)
-
-function mod:prePickupCollision(heart, collider, _)
-	if collider:ToPlayer() then
-		local playerType = collider:ToPlayer():GetPlayerType()
-
-		if playerType == g.PLAYER_DORKY then
-			return dorkyMechanics:IgnoreHeartPickups(heart)
-		elseif playerType == g.PLAYER_SPIRIT then
-			return spiritMechanics:ignoreMostHearts(heart, collider:ToPlayer())
-		end
-	end
-end
-
-mod:AddCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, mod.prePickupCollision, PickupVariant.PICKUP_HEART)
 
 mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, dorkyMechanics.PreTongueUse, g.COLLECTIBLE_TONGUE_GRAPPLE)
 mod:AddCallback(ModCallbacks.MC_USE_ITEM, dorkyMechanics.OnTongueUse, g.COLLECTIBLE_TONGUE_GRAPPLE)
@@ -64,7 +100,6 @@ mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, dorkyMechanics.TongueHandler
 mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, dorkyMisc.noDeadBodies, EffectVariant.DEVIL)
 mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, dorkyMechanics.dummyTongueTargetAI, g.DORKY_TONGUE_DUMMY_TARGET)
 mod:AddCallback(ModCallbacks.MC_PRE_NPC_COLLISION, dorkyMechanics.IgnoreTonguedNPCCollision)
-mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, dorkyMisc.dorkyDeathGoopUpdate, EffectVariant.PLAYER_CREEP_BLACK)
 
 mod:AddCallback(ModCallbacks.MC_PRE_NPC_UPDATE, spiritMechanics.evisCordSpikeUpdate, EntityType.ENTITY_VIS)
 mod:AddCallback(ModCallbacks.MC_NPC_UPDATE, spiritMechanics.restoreFlashOnDamage)
@@ -75,4 +110,20 @@ mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, spiritMechanics.dummySpikeTa
 mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, spiritMechanics.spiritSpikeHandlerUpdate, g.SPIRIT_SPIKE_ROPE_HANDLER)
 
 mod:AddCallback(ModCallbacks.MC_POST_RENDER, dorkyMechanics.Debug)
-mod:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, spiritHUDRender.OnRender)
+mod:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, spiritHUDRender.OnRender) ]]
+
+--!End of file
+
+--Mod.Include("scripts.compatibility.patches.eid.eid_support")
+Mod.Include("scripts.compatibility.patches_loader")
+
+if Mod.FileLoadError then
+	Mod:Log("Mod failed to load! Report this to Benny in the dev server!")
+elseif Mod.InvalidPathError then
+	Mod:Log("One or more files were unable to be loaded. Report this to Benny in the dev server!")
+else
+	Mod:Log("v" .. Mod.Version .. " successfully loaded!")
+end
+
+DorkyMod.Include = nil
+DorkyMod.LoopInclude = nil
