@@ -16,7 +16,8 @@ THE_VOID.StatsTable = {
 	[CacheFlag.CACHE_SHOTSPEED] = 0,
 	[CacheFlag.CACHE_LUCK] = -2,
 	[CacheFlag.CACHE_TEARFLAG] = TearFlags.TEAR_SPECTRAL,
-	[CacheFlag.CACHE_FLYING] = true
+	[CacheFlag.CACHE_FLYING] = true,
+	[CacheFlag.CACHE_TEARCOLOR] = Color(0,0,0,1)
 }
 
 ---@param player EntityPlayer
@@ -43,7 +44,6 @@ function THE_VOID:DeathEffects(player)
 	then
 		return
 	end
-
 	if sprite:IsEventTriggered("FuckingExplode") then
 		local goop = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.PLAYER_CREEP_BLACK, 0,
 			player.Position, Vector.Zero, player)
@@ -82,6 +82,18 @@ function THE_VOID:DeathEffects(player)
 	end
 end
 
+Mod:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
+	for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PLAYER)) do
+		if type(ent) == "userdata" then
+			---@cast ent Entity
+			local player = ent:ToPlayer()
+			if player then
+				THE_VOID:DeathEffects(player)
+			end
+		end
+	end
+end)
+
 ---@param player EntityPlayer
 local function getRealSoulHearts(player)
 	local blackCount = 0
@@ -94,7 +106,7 @@ local function getRealSoulHearts(player)
 			blackCount = blackCount + 1
 		end
 	end
-	return blackCount
+	return soulHearts - blackCount
 end
 
 ---@param player EntityPlayer

@@ -1,8 +1,8 @@
 local Mod = DorkyMod
 local DORKY = Mod.Character.DORKY
 local THE_VOID = Mod.Character.THE_VOID
-local CCP = include("scripts.compatibility.character_costume_protector")
-CCP.Init(Mod)
+local CCP = include("scripts.dorky_character.character_costume_protector")
+CCP:Init(DorkyMod)
 
 local CHAR_SETUP = {}
 
@@ -16,8 +16,8 @@ function CHAR_SETUP:ApplyCustomAnm2(player)
 	then
 		local sprite = player:GetSprite()
 		local playerType = player:GetPlayerType()
-		local name = playerType == Mod.PLAYER_DORKY and "dorky" or "spirit"
-		sprite:Load("gfx/characters/player_" .. name[playerType] .. ".anm2", true)
+		local name = playerType == Mod.PLAYER_DORKY and "dorky" or "dorky_b"
+		sprite:Load("gfx/characters/player_" .. name .. ".anm2", true)
 		sprite:Play(sprite:GetDefaultAnimation(), true)
 		data.DorkyCustomAnm2Loaded = true
 	elseif player:IsCoopGhost()
@@ -110,23 +110,27 @@ function CHAR_SETUP:CharacterStats(player, cacheFlag)
 	local playerType = player:GetPlayerType()
 	if playerType ~= Mod.PLAYER_DORKY and playerType ~= Mod.PLAYER_DORKY_B then return end
 	local stats = playerType == Mod.PLAYER_DORKY and DORKY.StatsTable or THE_VOID.StatsTable
+	local stat = stats[cacheFlag]
 
 	if cacheFlag == CacheFlag.CACHE_SPEED then
-		player.MoveSpeed = player.MoveSpeed + stats[cacheFlag]
+		player.MoveSpeed = player.MoveSpeed + stat
 	elseif cacheFlag == CacheFlag.CACHE_FIREDELAY then
-		player.MaxFireDelay = player.MaxFireDelay * stats[cacheFlag]
+		player.MaxFireDelay = player.MaxFireDelay * stat
 	elseif cacheFlag == CacheFlag.CACHE_DAMAGE then
-		player.Damage = player.Damage * stats[cacheFlag]
+		player.Damage = player.Damage * stat
 	elseif cacheFlag == CacheFlag.CACHE_RANGE then
-		player.TearRange = player.TearRange + (stats[cacheFlag] * 40)
+		player.TearRange = player.TearRange + (stat * 40)
 	elseif cacheFlag == CacheFlag.CACHE_SHOTSPEED then
-		player.ShotSpeed = player.ShotSpeed + stats[cacheFlag]
+		player.ShotSpeed = player.ShotSpeed + stat
 	elseif cacheFlag == CacheFlag.CACHE_LUCK then
-		player.Luck = player.Luck + stats[cacheFlag]
+		player.Luck = player.Luck + stat
 	elseif cacheFlag == CacheFlag.CACHE_TEARFLAG then
-		player.TearFlags = player.TearFlags | stats[cacheFlag]
-	elseif cacheFlag == CacheFlag.CACHE_FLYING and stats[cacheFlag] then
+		player.TearFlags = player.TearFlags | stat
+	elseif cacheFlag == CacheFlag.CACHE_FLYING and stat then
 		player.CanFly = true
+	elseif cacheFlag == CacheFlag.CACHE_TEARCOLOR and stat then
+		---@cast stat Color
+		player.TearColor = stat
 	end
 end
 

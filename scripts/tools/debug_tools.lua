@@ -14,7 +14,7 @@ local function getPrefix()
 			return string.format("[%s:%s] ", file, info.currentline)
 		end
 	else
-		return "[DorkyCharacter] "
+		return string.format("[%s] ", DorkyMod.Name)
 	end
 end
 

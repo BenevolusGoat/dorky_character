@@ -39,6 +39,18 @@ function DORKY:SpawnBlackGoopOnDeath(player)
 	end
 end
 
+Mod:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
+	for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PLAYER)) do
+		if type(ent) == "userdata" then
+			---@cast ent Entity
+			local player = ent:ToPlayer()
+			if player then
+				DORKY:SpawnBlackGoopOnDeath(player)
+			end
+		end
+	end
+end)
+
 ---@param effect EntityEffect
 function DORKY:GoopUpdate(effect)
 	local data = effect:GetData()
@@ -67,12 +79,7 @@ function DORKY:NoRedHealth(player)
 	end
 end
 
-function DORKY:OnPeffectUpdate(player)
-	DORKY:NoRedHealth(player)
-	DORKY:SpawnBlackGoopOnDeath(player)
-end
-
-Mod:AddCallback(ModCallbacks.MC_POST_PEFFECT_UPDATE, DORKY.OnPeffectUpdate, Mod.PLAYER_DORKY)
+Mod:AddCallback(ModCallbacks.MC_POST_PEFFECT_UPDATE, DORKY.NoRedHealth, Mod.PLAYER_DORKY)
 
 ---@param heart EntityPickup
 ---@param collider Entity

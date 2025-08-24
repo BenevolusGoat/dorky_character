@@ -77,7 +77,8 @@ local characters = {
 	"dorky.character_dorky",
 	"dorky.tongue_grapple",
 	"dorky_b.character_dorky_b",
-	"dorky_b.soul_drain"
+	"dorky_b.soul_drain",
+	"character_setup"
 }
 
 Mod.LoopInclude(characters, "scripts.dorky_character")

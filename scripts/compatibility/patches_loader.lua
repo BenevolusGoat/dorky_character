@@ -43,7 +43,9 @@ function loader:ApplyPatches()
 end
 
 local patches = {
-	"epiphany"
+	"coop_ghost",
+	"no_costumes",
+	"pog"
 }
 
 for _, fileName in ipairs(patches) do
