@@ -7,6 +7,7 @@ local function noCostumesPatch()
 	addCostumeToIgnoreList("gfx/characters/costume_dorky_flight.anm2")
 	addCostumeToIgnoreList("gfx/characters/costume_dorky_pog.anm2")
 	addCostumeToIgnoreList("gfx/characters/costume_dorky_b.anm2")
+	addCostumeToIgnoreList("gfx/characters/costume_dorky_b_pog.anm2")
 end
 
-loader:RegisterPatch("addCostumeToIgnoreList", noCostumesPatch, "No Costumes")
+loader:RegisterPatch("NoCostumes", noCostumesPatch)

@@ -43,28 +43,29 @@ function CHAR_SETUP:RestoreVanillaAnm2(player)
 				sprite:GetFilename() == "gfx/characters/player_dorky.anm2"
 				or sprite:GetFilename() == "gfx/characters/player_dorky_b.anm2"
 			) then
+
 			sprite:Load("gfx/001.000_player.anm2", true)
-			local fallbackSprites = {
-				[PlayerType.PLAYER_JACOB] = "gfx/characters/costumes/character_002x_jacob.png",
-				[PlayerType.PLAYER_ESAU] = "gfx/characters/costumes/character_003x_esau.png",
-				[PlayerType.PLAYER_THEFORGOTTEN_B] = "gfx/characters/costumes/character_016b_theforgotten.png",
-				[PlayerType.PLAYER_THESOUL_B] = "gfx/characters/costumes/character_017b_thesoul.png",
-			}
-			local colorToSuffix = {
-				[SkinColor.SKIN_PINK] = "",
-				[SkinColor.SKIN_WHITE] = "_white",
-				[SkinColor.SKIN_BLACK] = "_black",
-				[SkinColor.SKIN_BLUE] = "_blue",
-				[SkinColor.SKIN_RED] = "_red",
-				[SkinColor.SKIN_GREEN] = "_green",
-				[SkinColor.SKIN_GREY] = "_grey",
-				[SkinColor.SKIN_SHADOW] = "_shadow",
-			}
 
 			if not player:GetOtherTwin() then
 				--This automatically refreshes their default sprites
 				player:ChangePlayerType(playerType)
 			else
+				local fallbackSprites = {
+					[PlayerType.PLAYER_JACOB] = "gfx/characters/costumes/character_002x_jacob.png",
+					[PlayerType.PLAYER_ESAU] = "gfx/characters/costumes/character_003x_esau.png",
+					[PlayerType.PLAYER_THEFORGOTTEN_B] = "gfx/characters/costumes/character_016b_theforgotten.png",
+					[PlayerType.PLAYER_THESOUL_B] = "gfx/characters/costumes/character_017b_thesoul.png",
+				}
+				local colorToSuffix = {
+					[SkinColor.SKIN_PINK] = "",
+					[SkinColor.SKIN_WHITE] = "_white",
+					[SkinColor.SKIN_BLACK] = "_black",
+					[SkinColor.SKIN_BLUE] = "_blue",
+					[SkinColor.SKIN_RED] = "_red",
+					[SkinColor.SKIN_GREEN] = "_green",
+					[SkinColor.SKIN_GREY] = "_grey",
+					[SkinColor.SKIN_SHADOW] = "_shadow",
+				}
 				--Original twin will spawn a duplicate of their opposite twin with ChangePlayerType. Replace spritesheets directly instead
 				local skinPath = REPENTOGON and EntityConfig and EntityConfig.GetPlayer(playerType):GetSkinPath() or
 					fallbackSprites[playerType]

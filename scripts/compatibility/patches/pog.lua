@@ -8,4 +8,4 @@ local function pogCostumePatch()
 		Isaac.GetCostumeIdByPath("gfx/characters/costume_dorky_b_pog.anm2"))
 end
 
-loader:RegisterPatch("Poglite", pogCostumePatch)
+loader:RegisterPatch("Poglite", pogCostumePatch, "Pog For Good Items")

@@ -1,0 +1,17 @@
+v1.2
+Didn't expect an update for this mod, huh?
+
+General Adjustments
+- Complete overhaul of the codebase. Primarily just a lot better to look at.
+- Added HudHelper for use with Tainted Dorky's "Soul Drain Bar" for more accurate and dynamic positioning.
+- Added "death item" sprites for Tongue Grapple and Soul Drain.
+- Changed the descriptions for Tongue Grapple and Soul Drain to be less memey.
+- Improved method of restoring correct character sprites upon Dorky or Tainted Dorky reviving as another vanilla character.
+- Collecting a Blended Heart as Dorky now respect mods that resprite it
+
+Mod Support
+- Added EID support! Descriptions available for Dorky, his Tainted form, their birthrights, and pocket actives. Supports English and Spanish.
+- Added POG costume for Tainted Dorky
+
+API
+- There really isn't an API, but the mod now has a "DorkyMod" global and exposes most of the functions and enumerations available in the mod. No mod will ever interact with this mod, but it's there, lol.

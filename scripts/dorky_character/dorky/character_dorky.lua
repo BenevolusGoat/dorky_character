@@ -28,9 +28,8 @@ function DORKY:SpawnBlackGoopOnDeath(player)
 		and sprite:GetFilename() == "gfx/characters/player_dorky.anm2"
 		and sprite:IsEventTriggered("SpawnGoopy")
 	then
-		local goop = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.PLAYER_CREEP_BLACK, 0, player.Position,
-		Vector.Zero,
-			player)
+		local goop = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.PLAYER_CREEP_BLACK, 0,
+			player.Position, Vector.Zero, player)
 		goop:Update()
 		goop.SpriteScale = Vector(player.SpriteScale.X * CREEP_SIZE, player.SpriteScale.Y * CREEP_SIZE)
 		goop:GetData().DorkyDeathGoop = true
@@ -70,6 +69,7 @@ Mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, DORKY.GoopUpdate, EffectVari
 function DORKY:NoRedHealth(player)
 	local heartContainers = player:GetMaxHearts()
 	local redHearts = player:GetHearts()
+
 	if heartContainers > 0 then
 		player:AddMaxHearts(-heartContainers)
 		player:AddBlackHearts(heartContainers)

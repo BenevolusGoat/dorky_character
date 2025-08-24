@@ -115,7 +115,7 @@ mod:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, spiritHUDRender.OnRender) ]]
 
 --!End of file
 
---Mod.Include("scripts.compatibility.patches.eid.eid_support")
+Mod.Include("scripts.compatibility.patches.eid_support")
 Mod.Include("scripts.compatibility.patches_loader")
 
 if Mod.FileLoadError then
