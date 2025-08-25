@@ -8,6 +8,7 @@ General Adjustments
 - Changed the descriptions for Tongue Grapple and Soul Drain to be less memey.
 - Improved method of restoring correct character sprites upon Dorky or Tainted Dorky reviving as another vanilla character.
 - Collecting a Blended Heart as Dorky now respect mods that resprite it
+- Fix bugs with gaining more Birthrights as Dorky and code not working with the increased paddle count
 
 Mod Support
 - Added EID support! Descriptions available for Dorky, his Tainted form, their birthrights, and pocket actives. Supports English and Spanish.
