@@ -337,7 +337,7 @@ local items = {
 			Name = "Tongue Grapple",
 			Description = {
 				"Sends out an extendable tongue from Isaac that latches onto an enemy",
-				"#The enemy will be pulled towards Isaac and then knocked back, taking 5 + Isaac's damage"
+				"#The enemy will be pulled towards Isaac and then knocked back, dealing 5 + Isaac's damage"
 			}
 		}
 	},

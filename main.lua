@@ -71,7 +71,7 @@ local helpers = {
 
 Mod.LoopInclude(tools, "scripts.tools")
 Mod.LoopInclude(helpers, "scripts.helpers")
-
+Mod.Include("flags")
 
 local characters = {
 	"dorky.character_dorky",

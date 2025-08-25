@@ -25,7 +25,7 @@ function TONGUE_GRAPPLE:GetMaxPaddles(player)
 	if numBirthright == 0 then
 		return 0
 	end
-	return TONGUE_GRAPPLE.DEFAULT_BIRTHRIGHT_PADDLES + (player:GetCollectibleNum(CollectibleType.COLLECTIBLE_BIRTHRIGHT))
+	return TONGUE_GRAPPLE.DEFAULT_BIRTHRIGHT_PADDLES + (numBirthright - 1)
 end
 
 ---@param evisCord EntityNPC
@@ -39,8 +39,8 @@ end
 
 ---@param player EntityPlayer
 ---@param handlerData table
-function TONGUE_GRAPPLE:CanReleaseEnemy(player, handlerData)
-	return not player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) or handlerData.DorkyTongueBounces == 0
+function TONGUE_GRAPPLE:ShouldReleaseEnemy(player, handlerData)
+	return not player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) or not handlerData.NPCSecured or handlerData.DorkyTongueBounces <= 0
 end
 
 ---@param player EntityPlayer
@@ -65,11 +65,13 @@ function TONGUE_GRAPPLE:CanPullTongueBack(player, handlerData)
 		return true
 	end
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) then
-		return handlerData.DorkyTongueBounces == TONGUE_GRAPPLE:GetMaxPaddles(player)
-			and handlerData.NPCSecured == true
-			or handlerData.DorkyTongueLifetime >= 0
+		return handlerData.NPCSecured
+			and (
+				handlerData.DorkyTongueBounces == TONGUE_GRAPPLE:GetMaxPaddles(player)
+				or handlerData.DorkyTongueLifetime >= 0
+			)
 	else
-		return handlerData.NPCSecured == true
+		return handlerData.NPCSecured
 	end
 end
 
@@ -81,6 +83,12 @@ function TONGUE_GRAPPLE:RemoveTongue(effect, player)
 		effect.Child:Remove()
 	end
 	effect:Remove()
+end
+
+---@param ptr EntityPtr
+local function getNPCFromPtr(ptr)
+	if not ptr or not ptr.Ref then return end
+	return ptr.Ref:ToNPC()
 end
 
 --#endregion
@@ -109,7 +117,7 @@ function TONGUE_GRAPPLE:OnTongueUse(_, _, player)
 		dummyTarget.Visible = false
 		movementHandler.Child = evisCord
 		movementHandler.Parent = player
-		movementHandler:GetData().NPCTarget = npc
+		movementHandler:GetData().NPCTarget = EntityPtr(npc)
 		movementHandler.Visible = false
 		movementHandler.DepthOffset = 301
 		handlerSprite.Scale = Vector(1.5, 1.5)
@@ -141,34 +149,38 @@ function TONGUE_GRAPPLE:OnTongueUse(_, _, player)
 	return { Discharge = npc ~= nil, Remove = false, ShowAnim = false }
 end
 
+Mod:AddCallback(ModCallbacks.MC_USE_ITEM, TONGUE_GRAPPLE.OnTongueUse, Mod.COLLECTIBLE_TONGUE_GRAPPLE)
+
 --#endregion
 
 --#region Handler update
 
 ---@param player EntityPlayer
 ---@param effect EntityEffect
-function TONGUE_GRAPPLE:KnockbackEnemy(player, effect)
+---@param npc EntityNPC
+function TONGUE_GRAPPLE:KnockbackEnemy(player, effect, npc)
 	local handlerData = effect:GetData()
-	handlerData.NPCTarget.Velocity = Vector.Zero
+	npc.Velocity = Vector.Zero
 
-	local direction = (player.Position - handlerData.NPCTarget.Position):Normalized()
+	local direction = (player.Position - npc.Position):Normalized()
 	local knockbackTear = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.FIST, 0,
-		handlerData.NPCTarget.Position + direction:Resized(20), direction:Resized(-1), player):ToTear()
+		npc.Position + direction:Resized(20), direction:Resized(-1), player):ToTear()
 	---@cast knockbackTear EntityTear
 	knockbackTear:AddTearFlags(TearFlags.TEAR_PUNCH)
 	knockbackTear.CollisionDamage = 5 + player.Damage
 	knockbackTear.Visible = false
-	handlerData.NPCTarget.Velocity = Vector.Zero
+	npc.Velocity = Vector.Zero
 
-	if TONGUE_GRAPPLE:CanReleaseEnemy(player, handlerData) then
-		handlerData.NPCTarget:ClearEntityFlags(EntityFlag.FLAG_FREEZE)
+	if TONGUE_GRAPPLE:ShouldReleaseEnemy(player, handlerData) then
+		npc:ClearEntityFlags(EntityFlag.FLAG_FREEZE)
+		npc:GetData().IsDorkyTongued = nil
 	end
 
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT)
 		and handlerData.DorkyTongueBounces > 0
 	then
-		handlerData.DorkyTongueLifetime = -7
-		handlerData.NPCTarget:GetData().DorkyTonguedNPC = 20
+		handlerData.DorkyTongueLifetime = -4
+		npc:GetData().DorkyTonguedNPC = 20
 		effect.Velocity = Vector.Zero
 		effect:AddVelocity(direction:Resized(-30))
 	end
@@ -179,6 +191,7 @@ function TONGUE_GRAPPLE:TongueHandlerUpdate(effect)
 	local player = effect.Parent:ToPlayer()
 	if not player then return end
 	local handlerData = effect:GetData()
+	local npc = getNPCFromPtr(handlerData.NPCTarget)
 
 	if not player
 		or not player:Exists()
@@ -189,14 +202,14 @@ function TONGUE_GRAPPLE:TongueHandlerUpdate(effect)
 	end
 
 	if handlerData.DorkyTongueLifetime then
-		handlerData.DorkyTongueLifetime = handlerData.DorkyTongueLifetime + 1
+		handlerData.DorkyTongueLifetime = min(handlerData.DorkyTongueLifetime + 1, TONGUE_GRAPPLE.MAX_TONGUE_DURATION)
 	end
 
-	if handlerData.NPCTarget and handlerData.NPCTarget:Exists() and not handlerData.NPCTarget:IsDead() then
-		if effect.Position:DistanceSquared(handlerData.NPCTarget.Position) <= 50 ^ 2 and not handlerData.NPCSecured then
+	if npc and not npc:IsDead() then
+		if effect.Position:DistanceSquared(npc.Position) <= (50 ^ 2) and not handlerData.NPCSecured then
 			handlerData.NPCSecured = true
-			handlerData.NPCTarget:AddEntityFlags(EntityFlag.FLAG_FREEZE)
-			handlerData.NPCTarget:GetData().DorkyTonguedNPC = 10
+			npc:AddEntityFlags(EntityFlag.FLAG_FREEZE)
+			npc:GetData().DorkyTonguedNPC = 10
 			effect.Visible = true
 		end
 	elseif handlerData.NPCSecured then
@@ -210,37 +223,33 @@ function TONGUE_GRAPPLE:TongueHandlerUpdate(effect)
 			targetVec = targetVec:Resized(30)
 		end
 
-		handlerData.DorkyTongueLifetime = min(handlerData.DorkyTongueLifetime, 8)
-
 		effect.Velocity = Mod:SmoothLerp(effect.Velocity, targetVec,
 			min(0.1 + handlerData.DorkyTongueLifetime / 10), 1)
 
-		if effect.Position:DistanceSquared(player.Position) < 30 ^ 2
+		if effect.Position:DistanceSquared(player.Position) <= 50 ^ 2
 			and TONGUE_GRAPPLE:CanKnockbackEnemy(player, handlerData)
 		then
-			if handlerData.DorkyTongueBounces then
-				handlerData.DorkyTongueBounces = handlerData.DorkyTongueBounces - 1
-			end
-
-			if TONGUE_GRAPPLE:CanReleaseEnemy(player, handlerData) then
-				handlerData.NPCTarget:GetData().IsDorkyTongued = nil
-				TONGUE_GRAPPLE:RemoveTongue(effect, player)
-			end
-
-			if handlerData.NPCSecured and handlerData.NPCTarget and handlerData.NPCTarget:Exists() then
-				TONGUE_GRAPPLE:KnockbackEnemy(player, effect)
+			if npc and not npc:IsDead() and handlerData.NPCSecured then
+				if handlerData.DorkyTongueBounces then
+					handlerData.DorkyTongueBounces = handlerData.DorkyTongueBounces - 1
+				end
+				TONGUE_GRAPPLE:KnockbackEnemy(player, effect, npc)
 			elseif TONGUE_GRAPPLE:CanRechargePocket(player, handlerData) then
 				if player:GetActiveItem(ActiveSlot.SLOT_POCKET) == Mod.COLLECTIBLE_TONGUE_GRAPPLE then
 					player:FullCharge(ActiveSlot.SLOT_POCKET)
 				end
+			end
+			if TONGUE_GRAPPLE:ShouldReleaseEnemy(player, handlerData) then
+				TONGUE_GRAPPLE:RemoveTongue(effect, player)
 			end
 		end
 	elseif handlerData.DorkyTongueLifetime > TONGUE_GRAPPLE.MAX_VELOCITY_DURATION then
 		effect.Velocity = effect.Velocity * 0.3
 	end
 	if handlerData.NPCSecured then
-		handlerData.NPCTarget.Position = effect.Position
-		if handlerData.NPCTarget:IsDead() or not handlerData.NPCTarget:Exists() then
+		if npc then
+			npc.Position = effect.Position
+		else
 			TONGUE_GRAPPLE:RemoveTongue(effect, player)
 		end
 	end

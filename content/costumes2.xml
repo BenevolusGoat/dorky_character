@@ -1,6 +1,6 @@
 <costumes anm2root="gfx/characters/">
 	<costume anm2path="costume_dorky.anm2" type="none" />
-	<costume anm2path="costume_dorky_tongueout.anm2" type="none" priority="10" hasSkinAlt="true" />
+	<costume anm2path="costume_dorky_tongue_out.anm2" type="none" priority="10" hasSkinAlt="true" />
 	<costume anm2path="costume_dorky_pog.anm2" priority="50" type="none" hasSkinAlt="true" />
 	<costume anm2path="costume_dorky_b_pog.anm2" priority="50" type="none" hasSkinAlt="true" />
 	<costume anm2path="costume_dorky_flight.anm2" type="none" isFlying="true"/>
