@@ -14,7 +14,8 @@ DORKY.StatsTable = {
 	[CacheFlag.CACHE_RANGE] = 0,
 	[CacheFlag.CACHE_SHOTSPEED] = -0.3,
 	[CacheFlag.CACHE_LUCK] = -1,
-	[CacheFlag.CACHE_TEARFLAG] = TearFlags.TEAR_SPECTRAL
+	[CacheFlag.CACHE_TEARFLAG] = TearFlags.TEAR_SPECTRAL,
+	[CacheFlag.CACHE_TEARCOLOR] = Color(0,0,0,1)
 }
 
 local CREEP_SIZE = 0.1

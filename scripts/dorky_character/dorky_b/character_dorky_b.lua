@@ -5,7 +5,6 @@ local THE_VOID = {}
 DorkyMod.Character.THE_VOID = THE_VOID
 
 THE_VOID.COSTUME = Isaac.GetCostumeIdByPath("gfx/characters/costume_dorky_b.anm2")
-
 THE_VOID.DEATH_EFFECT = Isaac.GetEntityVariantByName("Tainted Dorky Death Explosion")
 
 THE_VOID.StatsTable = {
@@ -16,8 +15,8 @@ THE_VOID.StatsTable = {
 	[CacheFlag.CACHE_SHOTSPEED] = 0,
 	[CacheFlag.CACHE_LUCK] = -2,
 	[CacheFlag.CACHE_TEARFLAG] = TearFlags.TEAR_SPECTRAL,
-	[CacheFlag.CACHE_FLYING] = true,
-	[CacheFlag.CACHE_TEARCOLOR] = Color(0,0,0,1)
+	[CacheFlag.CACHE_TEARCOLOR] = Color(0,0,0,1),
+	[CacheFlag.CACHE_FLYING] = true
 }
 
 ---@param player EntityPlayer
