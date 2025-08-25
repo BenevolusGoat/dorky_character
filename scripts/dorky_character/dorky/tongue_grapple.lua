@@ -28,15 +28,6 @@ function TONGUE_GRAPPLE:GetMaxPaddles(player)
 	return TONGUE_GRAPPLE.DEFAULT_BIRTHRIGHT_PADDLES + (numBirthright - 1)
 end
 
----@param evisCord EntityNPC
-function TONGUE_GRAPPLE:TongueUpdate(evisCord)
-	local data = evisCord:GetData()
-	if not data.IsDorkyTongue or evisCord.Variant ~= 10 or evisCord.SubType ~= 1 then return end
-	if evisCord.Target.Type == EntityType.ENTITY_EFFECT and evisCord.Target.Variant == TONGUE_GRAPPLE.DUMMY_TARGET then
-		return false
-	end
-end
-
 ---@param player EntityPlayer
 ---@param handlerData table
 function TONGUE_GRAPPLE:ShouldReleaseEnemy(player, handlerData)
@@ -314,6 +305,22 @@ end
 
 --On PRE as to work with mods that override vanilla behavior
 Mod:AddCallback(ModCallbacks.MC_PRE_NPC_UPDATE, TONGUE_GRAPPLE.TonguedNPCUpdate)
+
+
+---@param evisCord EntityNPC
+function TONGUE_GRAPPLE:TongueUpdate(evisCord)
+	local data = evisCord:GetData()
+	if data.IsDorkyTongue
+		and evisCord.Variant == 10
+		and evisCord.SubType == 1
+		and evisCord.Target.Type == EntityType.ENTITY_EFFECT
+		and evisCord.Target.Variant == TONGUE_GRAPPLE.DUMMY_TARGET
+	then
+		return false
+	end
+end
+
+Mod:AddCallback(ModCallbacks.MC_PRE_NPC_UPDATE, TONGUE_GRAPPLE.TongueUpdate, EntityType.ENTITY_VIS)
 
 --#endregion
 

@@ -93,11 +93,6 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, mod.OnPlayerUpdate)
 
-mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, dorkyMechanics.PreTongueUse, g.COLLECTIBLE_TONGUE_GRAPPLE)
-mod:AddCallback(ModCallbacks.MC_USE_ITEM, dorkyMechanics.OnTongueUse, g.COLLECTIBLE_TONGUE_GRAPPLE)
-mod:AddCallback(ModCallbacks.MC_PRE_NPC_UPDATE, dorkyMechanics.TongueUpdate, EntityType.ENTITY_VIS)
-mod:AddCallback(ModCallbacks.MC_NPC_UPDATE, dorkyMechanics.TonguedNPCUpdate)
-mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, dorkyMisc.noDeadBodies, EffectVariant.DEVIL)
 
 mod:AddCallback(ModCallbacks.MC_PRE_NPC_UPDATE, spiritMechanics.evisCordSpikeUpdate, EntityType.ENTITY_VIS)
 mod:AddCallback(ModCallbacks.MC_NPC_UPDATE, spiritMechanics.restoreFlashOnDamage)

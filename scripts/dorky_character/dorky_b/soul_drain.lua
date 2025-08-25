@@ -4,6 +4,7 @@ local SOUL_DRAIN = {}
 
 DorkyMod.Item.SOUL_DRAIN = {}
 
+SOUL_DRAIN.DAMAGE_TRACKER = Isaac.GetItemIdByName("Soul Drain Damage Tracker")
 SOUL_DRAIN.MOVEMENT_HANDLER = Isaac.GetEntityVariantByName("Soul Drain Rope Movement Handler")
 SOUL_DRAIN.DUMMY_TARGET = Isaac.GetEntityVariantByName("Soul Drain Dummy Target")
 
@@ -13,12 +14,16 @@ SOUL_DRAIN.MAX_NPC_ATTACH_DURATION = 120
 SOUL_DRAIN.COLLISION_RADIUS = 25
 SOUL_DRAIN.MAX_SPIKE_DISTANCE = 200
 SOUL_DRAIN.INIT_VELOCITY = 30
---[[
+
+SOUL_DRAIN.DAMAGE_HEAL_THRESHOLD = 100
+SOUL_DRAIN.DIRECT_DAMAGE_PERCENTAGE = 0.5
+SOUL_DRAIN.DIRECT_DAMAGE_CAP = 10
+
+SOUL_DRAIN.MAX_SPIKE_DURATION = 0.5
+
 ---@param player EntityPlayer
 function SOUL_DRAIN:GetDrainDuration(player)
-	local maxSpikeFireDelay = 0.5
-	local firedelay = player.MaxFireDelay >= maxSpikeFireDelay and player.MaxFireDelay or maxSpikeFireDelay
-	return firedelay * 3
+	return math.max(SOUL_DRAIN.MAX_SPIKE_DURATION, player.MaxFireDelay * 3)
 end
 
 ---@param player EntityPlayer
@@ -26,14 +31,14 @@ function SOUL_DRAIN:GetDrainDamage(player)
 	return player.Damage * 2 + 1.5
 end
 
----@param player EntityPlayer
+--[[ ---@param player EntityPlayer
 function SOUL_DRAIN:GetDamageRequirement(player)
 	local spikeDamage = SOUL_DRAIN:GetDrainDamage(player)
 	local minDmg = spikeDamage * SOUL_DRAIN.DMG_MULT
 	local mult = (SOUL_DRAIN.BASE_DMG / player.Damage * SOUL_DRAIN.DMG_MULT)
 	local dmgRequirement = math.ceil(math.max(minDmg, minDmg * mult))
 	return dmgRequirement
-end
+end ]]
 
 ---@param effect EntityEffect
 local function RemoveSpiritSpike(effect)
@@ -44,7 +49,7 @@ local function RemoveSpiritSpike(effect)
 end
 
 --TODO: ThrowableItemLib
-
+--[[
 ---@param itemID CollectibleType
 ---@param player EntityPlayer
 function SOUL_DRAIN:onSoulStealUse(itemID, _, player)
@@ -310,13 +315,6 @@ function SOUL_DRAIN:spiritSpikeHandlerUpdate(effect)
 end
 
 ---@param player EntityPlayer
-local function spawnBlackHeartIndicator(player)
-	local notify = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.HEART, 5, player.Position, Vector.Zero, player)
-	notify:GetSprite().Offset = Vector(0, -24)
-	notify.RenderZOffset = 1000
-end
-
----@param player EntityPlayer
 function SOUL_DRAIN:healFromSpiritSpike(player)
 	local data = player:GetData()
 	local dmgRequirement = SOUL_DRAIN:GetDamageRequirement(player)
@@ -395,5 +393,96 @@ function SOUL_DRAIN:restoreFlashOnDamage(npc)
 		npc:GetData().spiritSpikeShouldFlash = nil
 	end
 end
+]]
 
- ]]
+---@param player EntityPlayer
+local function spawnBlackHeartIndicator(player)
+	local notify = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.HEART, 5, player.Position, Vector.Zero, player)
+	notify:GetSprite().Offset = Vector(0, -24)
+	notify.RenderZOffset = 1000
+end
+
+---@param player EntityPlayer
+function SOUL_DRAIN:UpdateSoulDrainBar(player, amount)
+	local effects = player:GetEffects()
+	local data = player:GetData()
+	data.SoulDrainDamageTracker = (data.SoulDrainDamageTracker or effects:GetCollectibleEffectNum(SOUL_DRAIN.DAMAGE_TRACKER)) + amount
+	local healAmount = 1
+	if player:GetPlayerType() == Mod.PLAYER_DORKY_B and player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) then
+		healAmount = 2
+	end
+	local totalHealAmount = 0
+	while data.SoulDrainDamageTracker >= SOUL_DRAIN.DAMAGE_HEAL_THRESHOLD do
+		totalHealAmount = totalHealAmount + healAmount
+		data.SoulDrainDamageTracker = math.max(0, data.SoulDrainDamageTracker - SOUL_DRAIN.DAMAGE_HEAL_THRESHOLD)
+	end
+	if totalHealAmount > 0 then
+		spawnBlackHeartIndicator(player)
+		Mod.SFX:Play(SoundEffect.SOUND_VAMP_GULP)
+		player:AddBlackHearts(totalHealAmount)
+	end
+	effects:RemoveCollectibleEffect(SOUL_DRAIN.DAMAGE_TRACKER, -1)
+	effects:AddCollectibleEffect(SOUL_DRAIN.DAMAGE_TRACKER, false, math.floor(data.SoulDrainDamageTracker))
+end
+
+---@param source EntityRef
+local function tryGetPlayerFromSource(source)
+	local ent = source.Entity
+	if not ent then return end
+	if ent:ToPlayer() then
+		return ent:ToPlayer()
+	end
+	local spawnEnt = ent.SpawnerEntity
+	if not spawnEnt then return end
+	if spawnEnt:ToPlayer() then
+		return spawnEnt:ToPlayer()
+	elseif spawnEnt:ToFamiliar() then
+		return spawnEnt:ToFamiliar().Player
+	end
+end
+
+---@param ent Entity
+---@param amount number
+---@param flags DamageFlag
+---@param source EntityRef
+---@param countdown integer
+function SOUL_DRAIN:TrackDamageDealt(ent, amount, flags, source, countdown)
+	local player = tryGetPlayerFromSource(source)
+	if player and player:HasCollectible(Mod.COLLECTIBLE_SOUL_DRAIN) and ent:IsActiveEnemy(false) then
+		local dmgDealt = math.min(ent.HitPoints, amount)
+		SOUL_DRAIN:UpdateSoulDrainBar(player, math.min(SOUL_DRAIN.DIRECT_DAMAGE_CAP, dmgDealt * SOUL_DRAIN.DIRECT_DAMAGE_PERCENTAGE))
+	end
+end
+
+Mod:AddPriorityCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, CallbackPriority.LATE, SOUL_DRAIN.TrackDamageDealt)
+
+local BAR_LENGTH = 50
+
+local soulDrainBar = {}
+for _ = 1, 4 do
+	local sprite = Sprite()
+	sprite:Load("gfx/soul_drain_horizontal.anm2", true)
+	sprite:SetFrame("Main", 0)
+	soulDrainBar[#soulDrainBar + 1] = sprite
+end
+
+ HudHelper.RegisterHUDElement({
+	Name = "Soul Drain Black HP Bar",
+	Priority = HudHelper.Priority.NORMAL,
+	XPadding = 0,
+	YPadding = 0,
+	Condition = function(player, playerHUDIndex, hudLayout)
+		return player:HasCollectible(Mod.COLLECTIBLE_SOUL_DRAIN)
+	end,
+	OnRender = function(player, playerHUDIndex, hudLayout, position)
+		local sprite = soulDrainBar[playerHUDIndex]
+		local dmgDealt = player:GetEffects():GetCollectibleEffectNum(SOUL_DRAIN.DAMAGE_TRACKER)
+		local threshold = SOUL_DRAIN.DAMAGE_HEAL_THRESHOLD
+
+		sprite:RenderLayer(0, position)
+		sprite:RenderLayer(1, position, Vector.Zero, Vector(BAR_LENGTH * math.min(threshold, (threshold - dmgDealt) / threshold), 0))
+		if player:GetPlayerType() == Mod.PLAYER_DORKY_B and player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) then
+			sprite:RenderLayer(2, position)
+		end
+	end
+}, HudHelper.HUDType.EXTRA)

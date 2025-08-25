@@ -1,3 +1,3 @@
 DorkyMod.FLAGS = {}
 
-DorkyMod.FLAGS.Debug = true
+DorkyMod.FLAGS.Debug = false
