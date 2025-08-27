@@ -116,11 +116,11 @@ function THE_VOID:OnlyBlackHearts(player)
 	local eternalHearts = player:GetEternalHearts()
 	local soulHearts = getRealSoulHearts(player)
 
-	if redHearts > 0 and not REPENTOGON then
-		player:AddMaxHearts(-redHearts, true)
+	if redHearts > 0 then
+		player:AddMaxHearts(-redHearts)
 		player:AddBlackHearts(redHearts)
 	end
-	if redHealth > 0 and not REPENTOGON then
+	if redHealth > 0 then
 		player:AddHearts(-redHealth)
 	end
 	if boneHearts > 0 then

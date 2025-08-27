@@ -285,6 +285,7 @@ local characters = {
 		en_us = {
 			Name = "The Void",
 			Description = {
+				"Flight",
 				"#Can't have any hearts except for Black and Gold Hearts",
 				"#{{BlackHeart}} Health ups grant Black Hearts",
 			}
@@ -345,9 +346,11 @@ local items = {
 		en_us = {
 			Name = "Soul Drain",
 			Description = {
-				"Using the item and firing in a direction throws a black spike that sticks to Isaac",
-				"#The spike will stick to an enemy, dealing x1.5 Isaac's damage and slowly damage them over time for x2 Isaac's damage + 1.5",
-				"#Damage dealt will fill a bar that grants +1 {{BlackHeart}} Black Heart upon being filled"
+				"{{Battery}} Charges with damage dealt",
+				"#{{Throwable}} Using the item and firing in a direction throws a black spike connected to Isaac",
+				"#The spike sticks to enemies, repeatedly damaging them for x2 Isaac's damage + 1.5",
+				"#Spike damage fills the bar",
+				"#{{HalfBlackHeart}} The bar grants +1 Half Black Heart and resets upon being filled",
 			}
 		}
 	},

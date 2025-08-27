@@ -14,9 +14,9 @@ General Adjustments
 Gameplay Adjustments
 - Soul Drain's spike no longer deals damage on initial contact with an enemy
 - Progress on Soul Drain's Black Heart bar is now saved when exiting and continuing the run. Because I am lazy, it will only save whole numbers and not decimals
-- All damage dealt by the player now contributes to Soul Drain's Black Heart bar, but to a much lesser extent, and is capped per instance of damage. Damage dealt by the Soul Drain spike is 1:1
+- Soul Drain now charges based on damage dealt instead of a timed charge. Dealing 100 damage is required to recharge it to full
 - You can disconnect the Soul Drain spike from an enemy manually by using Soul Drain again while its uncharged
-- Soul Drain's spike will automatically detatch if the enemy is too far away from the player on top of being outside of the room
+- Soul Drain's spike will automatically detatch if the enemy is too far away from the player or is too far outside of the room
 - Soul Drain now has support for being used in other active slots, used indirectly by other means such as ? Card, and by players other than Tainted Dorky
 
 Mod Support

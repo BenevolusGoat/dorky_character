@@ -16,12 +16,12 @@ SOUL_DRAIN.MAX_NPC_ATTACH_DURATION = 120
 SOUL_DRAIN.COLLISION_RADIUS = 25
 SOUL_DRAIN.MAX_SPIKE_DISTANCE = 200
 SOUL_DRAIN.INIT_VELOCITY = 30
+SOUL_DRAIN.MAX_SPIKE_DURATION = 0.5
 
 SOUL_DRAIN.DAMAGE_HEAL_THRESHOLD = 100
-SOUL_DRAIN.DIRECT_DAMAGE_PERCENTAGE = 0.5
-SOUL_DRAIN.DIRECT_DAMAGE_CAP = 10
+SOUL_DRAIN.BAR_FILL_CAP = 20
 
-SOUL_DRAIN.MAX_SPIKE_DURATION = 0.25
+SOUL_DRAIN.MAX_CHARGE = Isaac.GetItemConfig():GetCollectible(Mod.COLLECTIBLE_SOUL_DRAIN).MaxCharges
 
 --#endregion
 
@@ -170,10 +170,21 @@ function SOUL_DRAIN:TrackDamageDealt(ent, amount, flags, source, countdown)
 	if player and player:HasCollectible(Mod.COLLECTIBLE_SOUL_DRAIN) and ent:IsActiveEnemy(false) then
 		local barAmount = math.min(ent.HitPoints, amount)
 
-		if not (source.Entity and source.Entity:ToEffect() and source.Variant == SOUL_DRAIN.MOVEMENT_HANDLER) then
-			barAmount = barAmount * SOUL_DRAIN.DIRECT_DAMAGE_PERCENTAGE
+		if source.Entity and source.Entity:ToEffect() and source.Variant == SOUL_DRAIN.MOVEMENT_HANDLER then
+			SOUL_DRAIN:UpdateSoulDrainBar(player, math.min(SOUL_DRAIN.BAR_FILL_CAP, barAmount))
+		else
+			for slot = ActiveSlot.SLOT_PRIMARY, ActiveSlot.SLOT_POCKET do
+				local maxCharge = SOUL_DRAIN.MAX_CHARGE
+				local charge = player:GetActiveCharge(slot)
+				if player:HasCollectible(CollectibleType.COLLECTIBLE_BATTERY) then
+					maxCharge = maxCharge * 2
+				end
+				if player:GetActiveItem(slot) == Mod.COLLECTIBLE_SOUL_DRAIN and charge < maxCharge then
+					player:SetActiveCharge(math.min(maxCharge, math.floor(charge + barAmount)), slot)
+					break
+				end
+			end
 		end
-		SOUL_DRAIN:UpdateSoulDrainBar(player, math.min(SOUL_DRAIN.DIRECT_DAMAGE_CAP, barAmount))
 	end
 end
 
@@ -299,7 +310,7 @@ function SOUL_DRAIN:SpikeHandlerUpdate(effect)
 					and player:GetActiveItem(slot) == Mod.COLLECTIBLE_SOUL_DRAIN
 					and not data.HadAttachedToNPC
 				then
-					player:FullCharge(slot)
+					player:FullCharge(slot, true)
 				end
 			end
 		elseif data.SoulDrainLifetime > 6 then
@@ -398,7 +409,7 @@ function SOUL_DRAIN:DetatchSpikeOnUseItem(player)
 		local slot = i == 1 and ActiveSlot.SLOT_PRIMARY or ActiveSlot.SLOT_POCKET
 		if player:GetActiveItem(slot) == Mod.COLLECTIBLE_SOUL_DRAIN
 			and Input.IsActionTriggered(ButtonAction.ACTION_PILLCARD, player.ControllerIndex)
-			and player:GetActiveCharge(slot) <= 1
+			and player:GetActiveCharge(slot) < SOUL_DRAIN.MAX_CHARGE
 		then
 			local playerPtrHash = GetPtrHash(player)
 			for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, SOUL_DRAIN.MOVEMENT_HANDLER)) do
