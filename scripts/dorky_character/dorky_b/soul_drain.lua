@@ -107,6 +107,7 @@ ThrowableItemLib:RegisterThrowableItem({
 		pData.spiritSpike = movementHandler
 		Mod.SFX:Play(SoundEffect.SOUND_WHIP)
 	end,
+	Flags = ThrowableItemLib.Flag.DISCHARGE_HIDE
 })
 
 --#endregion
@@ -287,11 +288,6 @@ function SOUL_DRAIN:SpikeHandlerUpdate(effect)
 	end
 
 	if player and player:Exists() and not player:IsDead() then
-		local updateSlot = slot ~= -1 and player:GetActiveItem(slot) == Mod.COLLECTIBLE_SOUL_DRAIN
-		if updateSlot then
-			player:SetActiveCharge(0, slot)
-		end
-
 		SOUL_DRAIN:TryStickToNPC(effect)
 
 		if data.SoulDrainLifetime > 9 and not data.AttachedToNPC then
@@ -304,6 +300,7 @@ function SOUL_DRAIN:SpikeHandlerUpdate(effect)
 			effect.Velocity = Mod:SmoothLerp(effect.Velocity, targetVec, math.min(0.1 + 8 / 10), 1)
 
 			if effect.Position:Distance(player.Position) < 30 then
+				local updateSlot = slot ~= -1 and player:GetActiveItem(slot) == Mod.COLLECTIBLE_SOUL_DRAIN
 				SOUL_DRAIN:RemoveSpike(effect)
 
 				if updateSlot
