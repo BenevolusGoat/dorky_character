@@ -1,3 +1,5 @@
+--#region Variables
+
 local Mod = DorkyMod
 local min = math.min
 
@@ -17,6 +19,8 @@ TONGUE_GRAPPLE.MAX_VELOCITY_DURATION = 4
 TONGUE_GRAPPLE.MAX_RANGE = 400
 TONGUE_GRAPPLE.INIT_VELOCITY = 35
 
+--#endregion
+
 --#region Helper
 
 ---@param player EntityPlayer
@@ -31,7 +35,7 @@ end
 ---@param player EntityPlayer
 ---@param handlerData table
 function TONGUE_GRAPPLE:ShouldReleaseEnemy(player, handlerData)
-	return not player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) or not handlerData.NPCSecured or handlerData.DorkyTongueBounces <= 0
+	return not player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) or not handlerData.AttachedToNPC or handlerData.DorkyTongueBounces <= 0
 end
 
 ---@param player EntityPlayer
@@ -56,13 +60,13 @@ function TONGUE_GRAPPLE:CanPullTongueBack(player, handlerData)
 		return true
 	end
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) then
-		return handlerData.NPCSecured
+		return handlerData.AttachedToNPC
 			and (
 				handlerData.DorkyTongueBounces == TONGUE_GRAPPLE:GetMaxPaddles(player)
 				or handlerData.DorkyTongueLifetime >= 0
 			)
 	else
-		return handlerData.NPCSecured
+		return handlerData.AttachedToNPC
 	end
 end
 
@@ -87,7 +91,7 @@ end
 --#region On Use
 
 ---@param player EntityPlayer
-function TONGUE_GRAPPLE:OnTongueUse(_, _, player)
+function TONGUE_GRAPPLE:OnTongueUse(_, _, player, _, slot)
 	local npc = Mod:GetClosestEnemy(player.Position, TONGUE_GRAPPLE.MAX_RANGE)
 
 	if npc then
@@ -109,6 +113,7 @@ function TONGUE_GRAPPLE:OnTongueUse(_, _, player)
 		movementHandler.Child = evisCord
 		movementHandler.Parent = player
 		movementHandler:GetData().NPCTarget = EntityPtr(npc)
+		movementHandler:GetData().ActiveSlot = slot
 		movementHandler.Visible = false
 		movementHandler.DepthOffset = 301
 		handlerSprite.Scale = Vector(1.5, 1.5)
@@ -197,13 +202,13 @@ function TONGUE_GRAPPLE:TongueHandlerUpdate(effect)
 	end
 
 	if npc and not npc:IsDead() then
-		if effect.Position:DistanceSquared(npc.Position) <= (50 ^ 2) and not handlerData.NPCSecured then
-			handlerData.NPCSecured = true
+		if effect.Position:DistanceSquared(npc.Position) <= (50 ^ 2) and not handlerData.AttachedToNPC then
+			handlerData.AttachedToNPC = true
 			npc:AddEntityFlags(EntityFlag.FLAG_FREEZE)
 			npc:GetData().DorkyTonguedNPC = 10
 			effect.Visible = true
 		end
-	elseif handlerData.NPCSecured then
+	elseif handlerData.AttachedToNPC then
 		effect.Visible = false
 	end
 
@@ -220,14 +225,18 @@ function TONGUE_GRAPPLE:TongueHandlerUpdate(effect)
 		if effect.Position:DistanceSquared(player.Position) <= 50 ^ 2
 			and TONGUE_GRAPPLE:CanKnockbackEnemy(player, handlerData)
 		then
-			if npc and not npc:IsDead() and handlerData.NPCSecured then
+			if npc and not npc:IsDead() and handlerData.AttachedToNPC then
 				if handlerData.DorkyTongueBounces then
 					handlerData.DorkyTongueBounces = handlerData.DorkyTongueBounces - 1
 				end
 				TONGUE_GRAPPLE:KnockbackEnemy(player, effect, npc)
 			elseif TONGUE_GRAPPLE:CanRechargePocket(player, handlerData) then
-				if player:GetActiveItem(ActiveSlot.SLOT_POCKET) == Mod.COLLECTIBLE_TONGUE_GRAPPLE then
-					player:FullCharge(ActiveSlot.SLOT_POCKET)
+				local slot = handlerData.ActiveSlot
+				if slot
+					and slot ~= -1
+					and player:GetActiveItem(slot) == Mod.COLLECTIBLE_TONGUE_GRAPPLE
+				then
+					player:FullCharge(slot)
 				end
 			end
 			if TONGUE_GRAPPLE:ShouldReleaseEnemy(player, handlerData) then
@@ -237,7 +246,7 @@ function TONGUE_GRAPPLE:TongueHandlerUpdate(effect)
 	elseif handlerData.DorkyTongueLifetime > TONGUE_GRAPPLE.MAX_VELOCITY_DURATION then
 		effect.Velocity = effect.Velocity * 0.3
 	end
-	if handlerData.NPCSecured then
+	if handlerData.AttachedToNPC then
 		if npc then
 			npc.Position = effect.Position
 		else
@@ -306,9 +315,8 @@ end
 --On PRE as to work with mods that override vanilla behavior
 Mod:AddCallback(ModCallbacks.MC_PRE_NPC_UPDATE, TONGUE_GRAPPLE.TonguedNPCUpdate)
 
-
 ---@param evisCord EntityNPC
-function TONGUE_GRAPPLE:TongueUpdate(evisCord)
+function TONGUE_GRAPPLE:EvisGutsUpdate(evisCord)
 	local data = evisCord:GetData()
 	if data.IsDorkyTongue
 		and evisCord.Variant == 10
@@ -320,7 +328,7 @@ function TONGUE_GRAPPLE:TongueUpdate(evisCord)
 	end
 end
 
-Mod:AddCallback(ModCallbacks.MC_PRE_NPC_UPDATE, TONGUE_GRAPPLE.TongueUpdate, EntityType.ENTITY_VIS)
+Mod:AddCallback(ModCallbacks.MC_PRE_NPC_UPDATE, TONGUE_GRAPPLE.EvisGutsUpdate, EntityType.ENTITY_VIS)
 
 --#endregion
 

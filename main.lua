@@ -62,7 +62,7 @@ end
 
 local tools = {
 	"debug_tools",
-	"hud_helper"
+	"hud_helper",
 }
 
 local helpers = {
@@ -72,6 +72,7 @@ local helpers = {
 Mod.LoopInclude(tools, "scripts.tools")
 Mod.LoopInclude(helpers, "scripts.helpers")
 Mod.Include("flags")
+Mod.Include("scripts.tools.vendor.throwableitemlib").Init()
 
 local characters = {
 	"dorky.character_dorky",
