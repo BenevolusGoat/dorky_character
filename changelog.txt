@@ -12,12 +12,16 @@ General Adjustments
 - Soul Drain's Black Heart bar no longer flashes when it is filled and no longer displays above "Strawman-like" copies of The Void
 
 Gameplay Adjustments
-- Soul Drain's spike no longer deals damage on initial contact with an enemy
-- Progress on Soul Drain's Black Heart bar is now saved when exiting and continuing the run. Because I am lazy, it will only save whole numbers and not decimals
-- Soul Drain now charges based on damage dealt instead of a timed charge. Dealing 100 damage is required to recharge it to full
+Basically all Tainted Dorky and Soul Drain
+- Increased Soul Drain's charge timer from 10 to 15
+- Soul Drain's initial collision damage is now the same as when it deals damage over time (Isaac's damage * 2 + 1.5)
 - You can disconnect the Soul Drain spike from an enemy manually by using Soul Drain again while its uncharged
-- Soul Drain's spike will automatically detatch if the enemy is too far away from the player or is too far outside of the room
+- Soul Drain's spike will automatically detatch if the enemy is too far away from the player, too far outside of the room, or no longer considered a valid target
+- Soul Drain's spike will now stay attached to enemies and not detatch except for the aforementioned conditions, but the normal cooldown is still present when attached to bosses
 - Soul Drain now has support for being used in other active slots, used indirectly by other means such as ? Card, and by players other than Tainted Dorky
+- Tainted Dorky can now collect Soul Hearts, but contribute to their Soul Drain bar instead of their health
+- Using Soul Drain while it is already active will remove the currently active spike
+- Soul Drain will no longer fully recharge itself upon failing to make contact with an enemy
 
 Mod Support
 - Added EID support! Descriptions available for Dorky, his Tainted form, their birthrights, and pocket actives. Supports English and Spanish

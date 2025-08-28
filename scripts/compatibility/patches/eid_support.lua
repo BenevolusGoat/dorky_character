@@ -288,6 +288,7 @@ local characters = {
 				"Flight",
 				"#Can't have any hearts except for Black and Gold Hearts",
 				"#{{BlackHeart}} Health ups grant Black Hearts",
+				"#Collecting {{SoulHeart}} Soul Hearts fills {{Collectible" .. Mod.COLLECTIBLE_SOUL_DRAIN .. "}} Soul Drain's bar"
 			}
 		}
 	},
@@ -346,7 +347,6 @@ local items = {
 		en_us = {
 			Name = "Soul Drain",
 			Description = {
-				"{{Battery}} Charges with damage dealt",
 				"#{{Throwable}} Using the item and firing in a direction throws a black spike connected to Isaac",
 				"#The spike sticks to enemies, repeatedly damaging them for x2 Isaac's damage + 1.5",
 				"#Spike damage fills the bar",

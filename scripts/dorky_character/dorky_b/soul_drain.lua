@@ -4,7 +4,7 @@ local Mod = DorkyMod
 
 local SOUL_DRAIN = {}
 
-DorkyMod.Item.SOUL_DRAIN = {}
+DorkyMod.Item.SOUL_DRAIN = SOUL_DRAIN
 
 SOUL_DRAIN.DAMAGE_TRACKER = Isaac.GetItemIdByName("Soul Drain DMG")
 SOUL_DRAIN.MOVEMENT_HANDLER = Isaac.GetEntityVariantByName("Soul Drain Rope Movement Handler")
@@ -68,6 +68,11 @@ ThrowableItemLib:RegisterThrowableItem({
 	Identifier = "SoulDrain",
 	ThrowFn = function(player, vect, slot, mimic)
 		local pData = player:GetData()
+		if pData.DorkySoulDrainSpike and pData.DorkySoulDrainSpike.Ref then
+			local effect = pData.DorkySoulDrainSpike.Ref:ToEffect()
+			---@cast effect EntityEffect
+			SOUL_DRAIN:RemoveSpike(effect)
+		end
 		local dir = vect:Resized(SOUL_DRAIN.INIT_VELOCITY)
 		local movementHandler = Isaac.Spawn(EntityType.ENTITY_EFFECT, SOUL_DRAIN.MOVEMENT_HANDLER, 0, player.Position,
 			dir,
@@ -102,12 +107,13 @@ ThrowableItemLib:RegisterThrowableItem({
 		evisCord.DepthOffset = 300
 		dummyTarget:Update()
 		movementHandler:Update()
-		movementHandler:GetData().ActiveSlot = slot
-		pData.canThrowSpiritSpike = false
-		pData.spiritSpike = movementHandler
+		if pData.DorkySoulDrainSpike then
+			pData.DorkySoulDrainSpike:SetReference(movementHandler)
+		else
+			pData.DorkySoulDrainSpike = EntityPtr(movementHandler)
+		end
 		Mod.SFX:Play(SoundEffect.SOUND_WHIP)
-	end,
-	Flags = ThrowableItemLib.Flag.DISCHARGE_HIDE
+	end
 })
 
 --#endregion
@@ -168,24 +174,15 @@ end
 ---@param countdown integer
 function SOUL_DRAIN:TrackDamageDealt(ent, amount, flags, source, countdown)
 	local player = tryGetPlayerFromSource(source)
-	if player and player:HasCollectible(Mod.COLLECTIBLE_SOUL_DRAIN) and ent:IsActiveEnemy(false) then
+	if player
+		and player:HasCollectible(Mod.COLLECTIBLE_SOUL_DRAIN)
+		and Mod:IsValidEnemyTarget(ent)
+		and source.Entity
+		and source.Entity:ToEffect()
+		and source.Variant == SOUL_DRAIN.MOVEMENT_HANDLER
+	then
 		local barAmount = math.min(ent.HitPoints, amount)
-
-		if source.Entity and source.Entity:ToEffect() and source.Variant == SOUL_DRAIN.MOVEMENT_HANDLER then
-			SOUL_DRAIN:UpdateSoulDrainBar(player, math.min(SOUL_DRAIN.BAR_FILL_CAP, barAmount))
-		else
-			for slot = ActiveSlot.SLOT_PRIMARY, ActiveSlot.SLOT_POCKET do
-				local maxCharge = SOUL_DRAIN.MAX_CHARGE
-				local charge = player:GetActiveCharge(slot)
-				if player:HasCollectible(CollectibleType.COLLECTIBLE_BATTERY) then
-					maxCharge = maxCharge * 2
-				end
-				if player:GetActiveItem(slot) == Mod.COLLECTIBLE_SOUL_DRAIN and charge < maxCharge then
-					player:SetActiveCharge(math.min(maxCharge, math.floor(charge + barAmount)), slot)
-					break
-				end
-			end
-		end
+		SOUL_DRAIN:UpdateSoulDrainBar(player, math.min(SOUL_DRAIN.BAR_FILL_CAP, barAmount))
 	end
 end
 
@@ -201,18 +198,26 @@ function SOUL_DRAIN:TryStickToNPC(effect)
 	if not player then return end
 	local data = effect:GetData()
 
-	if not data.AttachedToNPC and not data.HadAttachedToNPC then
+	if not data.AttachedToNPC then
 		local npc = Mod:GetClosestEnemy(effect.Position, SOUL_DRAIN.COLLISION_RADIUS)
 
 		if npc and Mod:IsValidEnemyTarget(npc) then
-			data.AttachedToNPC = true
-			data.NPCTarget = EntityPtr(npc)
-			data.HadAttachedToNPC = true
-			data.AttachDuration = SOUL_DRAIN.MAX_NPC_ATTACH_DURATION
-			data.HealthDrainCountdown = SOUL_DRAIN:GetDrainCountdown(player)
-			effect.Velocity = Vector.Zero
-			npc:AddSlowing(EntityRef(player), SOUL_DRAIN.MAX_NPC_ATTACH_DURATION, 0.1, Color(0.2, 0.2, 0.2))
-			Mod.SFX:Play(SoundEffect.SOUND_WHIP_HIT)
+			data.NPCHitList = data.NPCHitList or {}
+			local ptrHash = GetPtrHash(npc)
+			if not data.NPCHitList[ptrHash] then
+				SOUL_DRAIN:DrainEnemy(npc, player, EntityRef(effect))
+				data.NPCHitList[ptrHash] = true
+			end
+			if not npc:HasMortalDamage() and not npc:IsDead() and not data.HadAttachedToNPC then
+				data.HadAttachedToNPC = true
+				data.AttachedToNPC = true
+				data.NPCTarget = EntityPtr(npc)
+				data.AttachDuration = SOUL_DRAIN.MAX_NPC_ATTACH_DURATION
+				data.HealthDrainCountdown = SOUL_DRAIN:GetDrainCountdown(player)
+				effect.Velocity = Vector.Zero
+				npc:AddSlowing(EntityRef(player), SOUL_DRAIN.MAX_NPC_ATTACH_DURATION, 0.1, Color(0.2, 0.2, 0.2))
+				Mod.SFX:Play(SoundEffect.SOUND_WHIP_HIT)
+			end
 		end
 	end
 end
@@ -238,7 +243,7 @@ function SOUL_DRAIN:DrainAttachedNPC(effect)
 	if not player then return end
 	local data = effect:GetData()
 	local npc = getNPCFromPtr(data.NPCTarget)
-	if not npc then
+	if not npc or not Mod.Game:GetRoom():IsPositionInRoom(npc.Position, -30) or not Mod:IsValidEnemyTarget(npc) then
 		SOUL_DRAIN:DetatchSpike(effect)
 		return
 	end
@@ -248,7 +253,7 @@ function SOUL_DRAIN:DrainAttachedNPC(effect)
 
 	if distance > SOUL_DRAIN.MAX_SPIKE_DISTANCE then
 		--Too far or out of bounds
-		if distance > SOUL_DRAIN.MAX_SPIKE_DISTANCE * 2 or not Mod.Game:GetRoom():IsPositionInRoom(npc.Position, -30) then
+		if distance > SOUL_DRAIN.MAX_SPIKE_DISTANCE * 2 then
 			SOUL_DRAIN:DetatchSpike(effect)
 		else
 			--Shoutouts to Warden from Fiend Folio
@@ -266,7 +271,7 @@ function SOUL_DRAIN:DrainAttachedNPC(effect)
 		data.HealthDrainCountdown = SOUL_DRAIN:GetDrainCountdown(player)
 	end
 
-	if data.AttachDuration then
+	if data.AttachDuration and npc:IsBoss() then
 		if data.AttachDuration > 0 then
 			data.AttachDuration = data.AttachDuration - 1
 		else
@@ -279,7 +284,6 @@ end
 function SOUL_DRAIN:SpikeHandlerUpdate(effect)
 	local player = effect.Parent and effect.Parent:ToPlayer()
 	local data = effect:GetData()
-	local slot = data.ActiveSlot
 
 	if data.SoulDrainLifetime then
 		data.SoulDrainLifetime = data.SoulDrainLifetime + 1
@@ -300,15 +304,7 @@ function SOUL_DRAIN:SpikeHandlerUpdate(effect)
 			effect.Velocity = Mod:SmoothLerp(effect.Velocity, targetVec, math.min(0.1 + 8 / 10), 1)
 
 			if effect.Position:Distance(player.Position) < 30 then
-				local updateSlot = slot ~= -1 and player:GetActiveItem(slot) == Mod.COLLECTIBLE_SOUL_DRAIN
 				SOUL_DRAIN:RemoveSpike(effect)
-
-				if updateSlot
-					and player:GetActiveItem(slot) == Mod.COLLECTIBLE_SOUL_DRAIN
-					and not data.HadAttachedToNPC
-				then
-					player:FullCharge(slot, true)
-				end
 			end
 		elseif data.SoulDrainLifetime > 6 then
 			effect.Velocity = effect.Velocity * 0.3
@@ -364,7 +360,7 @@ Mod:AddCallback(ModCallbacks.MC_PRE_NPC_UPDATE, SOUL_DRAIN.EvisGutsUpdate, Entit
 
 --#region HUD
 
-local BAR_LENGTH = 50
+local BAR_LENGTH = 49
 
 local soulDrainBar = {}
 for _ = 1, 4 do
@@ -408,13 +404,9 @@ function SOUL_DRAIN:DetatchSpikeOnUseItem(player)
 			and Input.IsActionTriggered(ButtonAction.ACTION_PILLCARD, player.ControllerIndex)
 			and player:GetActiveCharge(slot) < SOUL_DRAIN.MAX_CHARGE
 		then
-			local playerPtrHash = GetPtrHash(player)
-			for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, SOUL_DRAIN.MOVEMENT_HANDLER)) do
-				local effect = ent:ToEffect()
-				---@cast effect EntityEffect
-				if GetPtrHash(effect.SpawnerEntity) == playerPtrHash then
-					SOUL_DRAIN:DetatchSpike(effect)
-				end
+			local data = player:GetData()
+			if data.DorkySoulDrainSpike and data.DorkySoulDrainSpike.Ref then
+				SOUL_DRAIN:DetatchSpike(data.DorkySoulDrainSpike.Ref:ToEffect())
 			end
 		end
 	end

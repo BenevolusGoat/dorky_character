@@ -7,6 +7,8 @@ DorkyMod.Character.THE_VOID = THE_VOID
 THE_VOID.COSTUME = Isaac.GetCostumeIdByPath("gfx/characters/costume_dorky_b.anm2")
 THE_VOID.DEATH_EFFECT = Isaac.GetEntityVariantByName("Tainted Dorky Death Explosion")
 
+THE_VOID.SOUL_HEART_CHARGE = 10
+
 THE_VOID.StatsTable = {
 	[CacheFlag.CACHE_SPEED] = 0,
 	[CacheFlag.CACHE_FIREDELAY] = 1,
@@ -131,6 +133,7 @@ function THE_VOID:OnlyBlackHearts(player)
 	end
 	if soulHearts > 0 then
 		player:AddSoulHearts(-soulHearts)
+		Mod.Item.SOUL_DRAIN:UpdateSoulDrainBar(player, THE_VOID.SOUL_HEART_CHARGE * soulHearts)
 	end
 end
 
