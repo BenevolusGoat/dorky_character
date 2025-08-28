@@ -26,8 +26,8 @@ function THE_VOID:VoidRegeneration(player)
 	local stage = Mod.Game:GetLevel():GetStage()
 
 	if stage == LevelStage.STAGE7 then
-		if Mod.Game.TimeCounter % 60 == 0
-			and Mod:RandomNum(1) == 1
+		if Mod.Game.TimeCounter % 1800 == 0
+			and Mod:RandomNum(2) == 1
 		then
 			player:AddBlackHearts(1)
 			Mod:SpawnBlackHeartIndicator(player)

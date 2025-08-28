@@ -1,5 +1,5 @@
 <items gfxroot="gfx/items/" version="1" deathanm2="gfx/death items.anm2">
 	<active id="1" name="Tongue Grapple" description="Ensnare" gfx="collectibles_tongue_grapple.png" maxcharges="150" chargetype="timed" quality="1" hidden="true" />
-	<active id="2" name="Soul Drain" description="Stabs into the essence" gfx="collectibles_soul_drain.png" maxcharges="450" chargetype="timed" quality="4" hidden="true" />
+	<active id="2" name="Soul Drain" description="Stabs into the essence" gfx="collectibles_soul_drain.png" maxcharges="2" quality="4" hidden="true" />
 	<passive name="Soul Drain DMG" description="Damage tracker" gfx="collectibles_soul_drain.png" quality="0" hidden="true" persistent="true" />
 </items>

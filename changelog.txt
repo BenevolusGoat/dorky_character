@@ -7,13 +7,13 @@ General Adjustments
 - Added "death item" sprites for Tongue Grapple and Soul Drain
 - Changed the descriptions for Tongue Grapple and Soul Drain to be less memey
 - Improved method of restoring correct character sprites upon Dorky or Tainted Dorky reviving as another vanilla character
-- Collecting a Blended Heart as Dorky now respect mods that resprite it
-- Fix bugs with gaining more Birthrights as Dorky and code not working with the increased paddle count
+- Collecting a Blended Heart as Dorky now respects mods that resprite it
 - Soul Drain's Black Heart bar no longer flashes when it is filled and no longer displays above "Strawman-like" copies of The Void
+- Fix Soul Drain not being usable with Car Battery
 
 Gameplay Adjustments
 Basically all Tainted Dorky and Soul Drain
-- Increased Soul Drain's charge timer from 10 to 15
+- Soul Drain now requires 2 charges instead of a charge of 10 seconds
 - Soul Drain's initial collision damage is now the same as when it deals damage over time (Isaac's damage * 2 + 1.5)
 - You can disconnect the Soul Drain spike from an enemy manually by using Soul Drain again while its uncharged
 - Soul Drain's spike will automatically detatch if the enemy is too far away from the player, too far outside of the room, or no longer considered a valid target
